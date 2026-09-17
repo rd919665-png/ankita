@@ -1,0 +1,6 @@
+{
+  "name": "Ankita Makeup Artist",
+  "description": "Professional makeup artist booking and management platform with service catalog, bridal packages, portfolio, appointment scheduling, online payments, customer portal, and admin management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

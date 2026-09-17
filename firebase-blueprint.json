@@ -1,0 +1,289 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Registered customer or guest profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "savedAddresses": { "type": "array" },
+        "wishlist": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "email"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Designated administrator / makeup artist",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Makeup and beauty service",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 120 },
+        "category": { "type": "string", "maxLength": 50 },
+        "price": { "type": "number" },
+        "duration": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "includedServices": { "type": "array" },
+        "productsUsed": { "type": "string", "maxLength": 500 },
+        "extraCharges": { "type": "string", "maxLength": 500 },
+        "isPopular": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "category", "price", "duration", "description", "imageUrl"]
+    },
+    "Package": {
+      "title": "Package",
+      "description": "Featured combo or event package",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 120 },
+        "price": { "type": "number" },
+        "discountPrice": { "type": "number" },
+        "duration": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "images": { "type": "array" },
+        "includedItems": { "type": "array" },
+        "terms": { "type": "string", "maxLength": 2000 },
+        "isFeatured": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "price", "description", "images"]
+    },
+    "PortfolioItem": {
+      "title": "PortfolioItem",
+      "description": "Makeup artist showcase image or video",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "maxLength": 60 },
+        "type": { "type": "string", "enum": ["image", "video"] },
+        "mediaUrl": { "type": "string", "maxLength": 1000 },
+        "thumbnailUrl": { "type": "string", "maxLength": 1000 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "isFeatured": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "category", "type", "mediaUrl"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Appointment booking created by customer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "customerId": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "customerEmail": { "type": "string", "maxLength": 150 },
+        "customerPhone": { "type": "string", "maxLength": 20 },
+        "serviceId": { "type": "string", "maxLength": 128 },
+        "serviceName": { "type": "string", "maxLength": 150 },
+        "bookingType": { "type": "string", "enum": ["service", "package"] },
+        "date": { "type": "string", "maxLength": 20 },
+        "timeSlot": { "type": "string", "maxLength": 50 },
+        "eventType": { "type": "string", "maxLength": 100 },
+        "venue": { "type": "string", "maxLength": 500 },
+        "specialInstructions": { "type": "string", "maxLength": 1000 },
+        "totalAmount": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "remainingAmount": { "type": "number" },
+        "bookingStatus": { "type": "string", "enum": ["Pending", "Confirmed", "Payment Pending", "Paid", "Completed", "Cancelled", "Rescheduled"] },
+        "paymentStatus": { "type": "string", "enum": ["Unpaid", "Advance Paid", "Partially Paid", "Fully Paid", "Refunded"] },
+        "paymentMethod": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "customerName", "customerPhone", "customerEmail", "serviceName", "date", "timeSlot", "totalAmount", "bookingStatus", "paymentStatus"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Payment transaction record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "bookingId": { "type": "string", "maxLength": 128 },
+        "customerId": { "type": "string", "maxLength": 128 },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["Advance", "Full", "Remaining"] },
+        "method": { "type": "string", "enum": ["UPI", "Card", "NetBanking", "Cash"] },
+        "transactionReference": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["Success", "Pending", "Failed", "Refunded"] },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "bookingId", "amount", "type", "method", "status", "timestamp"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Customer feedback and rating",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "bookingId": { "type": "string", "maxLength": 128 },
+        "customerId": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "serviceName": { "type": "string", "maxLength": 150 },
+        "rating": { "type": "number" },
+        "comment": { "type": "string", "maxLength": 1500 },
+        "photoUrl": { "type": "string", "maxLength": 1000 },
+        "isApproved": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "customerName", "rating", "comment", "isApproved"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Promotional discount coupon",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "code": { "type": "string", "maxLength": 30 },
+        "discountType": { "type": "string", "enum": ["percentage", "fixed"] },
+        "discountValue": { "type": "number" },
+        "minBookingAmount": { "type": "number" },
+        "maxDiscount": { "type": "number" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "applicableCategory": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "code", "discountType", "discountValue", "isActive"]
+    },
+    "Offer": {
+      "title": "Offer",
+      "description": "Special banner or seasonal offer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 500 },
+        "badge": { "type": "string", "maxLength": 50 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "ctaText": { "type": "string", "maxLength": 50 },
+        "link": { "type": "string", "maxLength": 200 },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "title", "description", "isActive"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System or admin alert for customer or artist",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "recipientId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "message": { "type": "string", "maxLength": 1000 },
+        "type": { "type": "string", "maxLength": 50 },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "recipientId", "title", "message", "type", "read"]
+    },
+    "BusinessSettings": {
+      "title": "BusinessSettings",
+      "description": "Master configuration editable in Admin Settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 50 },
+        "businessName": { "type": "string", "maxLength": 150 },
+        "artistName": { "type": "string", "maxLength": 100 },
+        "ownerName": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 25 },
+        "whatsapp": { "type": "string", "maxLength": 25 },
+        "email": { "type": "string", "maxLength": 150 },
+        "address": { "type": "string", "maxLength": 300 },
+        "city": { "type": "string", "maxLength": 100 },
+        "state": { "type": "string", "maxLength": 100 },
+        "pincode": { "type": "string", "maxLength": 20 },
+        "googleMapsLink": { "type": "string", "maxLength": 1000 },
+        "upiId": { "type": "string", "maxLength": 100 },
+        "upiName": { "type": "string", "maxLength": 100 },
+        "qrCodeUrl": { "type": "string", "maxLength": 1000 },
+        "instagram": { "type": "string", "maxLength": 500 },
+        "facebook": { "type": "string", "maxLength": 500 },
+        "youtube": { "type": "string", "maxLength": 500 },
+        "logoUrl": { "type": "string", "maxLength": 1000 },
+        "bannerUrl": { "type": "string", "maxLength": 1000 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "openingTime": { "type": "string", "maxLength": 20 },
+        "closingTime": { "type": "string", "maxLength": 20 },
+        "workingDays": { "type": "string", "maxLength": 100 },
+        "advancePercentage": { "type": "number" },
+        "cancellationPolicy": { "type": "string", "maxLength": 3000 },
+        "termsConditions": { "type": "string", "maxLength": 3000 },
+        "privacyPolicy": { "type": "string", "maxLength": 3000 }
+      },
+      "required": ["id", "businessName", "artistName", "phone", "email"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user profiles, preferences, and wishlist"
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Stores verified administrators"
+    },
+    "/services/{serviceId}": {
+      "schema": { "$ref": "#/entities/Service" },
+      "description": "Makeup services catalog"
+    },
+    "/packages/{packageId}": {
+      "schema": { "$ref": "#/entities/Package" },
+      "description": "Bridal and event package offerings"
+    },
+    "/portfolio/{portfolioId}": {
+      "schema": { "$ref": "#/entities/PortfolioItem" },
+      "description": "Portfolio gallery photos and videos"
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Customer bookings and appointments"
+    },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Payment receipts and transaction records"
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Customer reviews and testimonials"
+    },
+    "/coupons/{couponId}": {
+      "schema": { "$ref": "#/entities/Coupon" },
+      "description": "Discount coupons"
+    },
+    "/offers/{offerId}": {
+      "schema": { "$ref": "#/entities/Offer" },
+      "description": "Special banners and offers"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "System notices and appointment updates"
+    },
+    "/businessSettings/{settingsId}": {
+      "schema": { "$ref": "#/entities/BusinessSettings" },
+      "description": "Central business settings document"
+    }
+  }
+}
