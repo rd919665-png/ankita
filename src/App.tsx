@@ -17,6 +17,7 @@ import { AdminPanel } from '@/src/components/admin/AdminPanel.tsx';
 import { BookingModal } from '@/src/components/booking/BookingModal.tsx';
 import { PackageDetailModal } from '@/src/components/packages/PackageDetailModal.tsx';
 import { OfflineIndicator } from '@/src/components/common/OfflineIndicator.tsx';
+import { MobileInstallBanner } from '@/src/components/common/MobileInstallBanner.tsx';
 
 const AppContent: React.FC = () => {
   const {
@@ -34,6 +35,9 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#faf8f5] text-[#2e2621] selection:bg-[#8e512d] selection:text-white font-sans antialiased">
+      {/* 0. Mobile Native App Installation Banner */}
+      <MobileInstallBanner />
+
       {/* 1. Initial Animated Splash Screen */}
       {showSplash && (
         <SplashScreen
@@ -46,8 +50,8 @@ const AppContent: React.FC = () => {
       {/* 2. Top Header Navigation */}
       <Navbar onOpenNotifications={() => setNotificationsOpen(true)} />
 
-      {/* 3. Main Dynamic Content Page */}
-      <main className="flex-1">
+      {/* 3. Main Dynamic Content Page with mobile bottom nav clearance */}
+      <main className="flex-1 pb-24 md:pb-12">
         {activePage === 'home' && <HomePage />}
         {activePage === 'services' && <ServicesPage />}
         {activePage === 'packages' && <PackagesPage />}

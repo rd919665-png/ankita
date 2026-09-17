@@ -3,17 +3,35 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     color: #27272a;
-    background-color: #fdfbf9;
+    background-color: #faf8f5;
     -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: contain;
   }
 
   h1, h2, h3, .font-serif-luxury {
     font-family: 'Cormorant Garamond', Georgia, serif;
     letter-spacing: -0.01em;
+  }
+
+  /* Prevent automatic iOS Safari zoom on focus when font-size < 16px */
+  @media screen and (max-width: 768px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Safe area insets for notched phones */
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
   }
 }
 
@@ -23,7 +41,7 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #fdfbf9;
+  background: #faf8f5;
 }
 ::-webkit-scrollbar-thumb {
   background: #e4d5cc;
@@ -32,3 +50,4 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #c8b0a2;
 }
+

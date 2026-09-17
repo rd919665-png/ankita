@@ -21,7 +21,10 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({ customMessage })
   const waUrl = generateWhatsAppLink(defaultText);
 
   return (
-    <div id="floating-whatsapp-container" className="fixed bottom-20 md:bottom-8 right-5 z-40 flex flex-col items-end">
+    <div
+      id="floating-whatsapp-container"
+      className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] md:bottom-8 right-4 sm:right-6 z-40 flex flex-col items-end"
+    >
       {/* Interactive Quick Help Tooltip */}
       {showTooltip && (
         <div

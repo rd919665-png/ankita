@@ -1,6 +1,7 @@
 import React from 'react';
-import { User, Phone, Mail, Heart, Calendar, Shield, Trash2, Sparkles, LogIn } from 'lucide-react';
+import { User, Phone, Mail, Heart, Calendar, Shield, Trash2, Sparkles, LogIn, Smartphone } from 'lucide-react';
 import { useApp } from '@/src/context/AppContext.tsx';
+import { PWAInstallButton } from '@/src/components/common/PWAInstallButton.tsx';
 
 export const CustomerProfilePage: React.FC = () => {
   const {
@@ -78,6 +79,34 @@ export const CustomerProfilePage: React.FC = () => {
             <Shield className="w-4 h-4 text-amber-700" />
             <span>Switch to Admin Panel</span>
           </button>
+        </div>
+      </div>
+
+      {/* Mobile App & Quick Install Card */}
+      <div className="bg-gradient-to-r from-[#241a14] to-[#3a281e] text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-amber-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <div className="flex items-center space-x-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#d4a34b] to-[#8e512d] p-0.5 shrink-0 flex items-center justify-center shadow-lg">
+            <div className="w-full h-full rounded-[14px] bg-[#1c1613] flex items-center justify-center text-amber-300">
+              <Smartphone className="w-7 h-7" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h2 className="text-xl font-serif font-bold text-amber-100">
+                Install as Mobile Phone App
+              </h2>
+              <span className="text-[10px] bg-amber-400/20 text-amber-300 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                PWA
+              </span>
+            </div>
+            <p className="text-xs text-stone-300 mt-1 max-w-xl leading-relaxed">
+              Install Ankita Makeup Studio directly to your smartphone home screen. Enjoy full-screen viewing, faster booking speeds, and offline viewing of your appointment receipts.
+            </p>
+          </div>
+        </div>
+
+        <div className="shrink-0 w-full sm:w-auto">
+          <PWAInstallButton className="w-full sm:w-auto px-5 py-2.5 text-sm justify-center shadow-lg" />
         </div>
       </div>
 
