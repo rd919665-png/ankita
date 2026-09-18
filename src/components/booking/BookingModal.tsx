@@ -39,6 +39,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, target, onCl
     createBooking,
     applyCoupon,
     generateWhatsAppLink,
+    generateSmsLink,
     setActivePage,
   } = useApp();
 
@@ -741,21 +742,57 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, target, onCl
                 </div>
               </div>
 
-              {/* WhatsApp Share CTA */}
-              <div className="space-y-3 pt-2">
-                <a
-                  id="whatsapp-share-confirmation-btn"
-                  href={generateWhatsAppLink(
-                    `Hello Ankita! I have successfully confirmed my makeup appointment.\nName: ${createdBooking.customerName}\nService: ${createdBooking.serviceName}\nDate: ${createdBooking.date}\nTime: ${createdBooking.timeSlot}\nBooking ID: ${createdBooking.id}\nPaid Advance: ₹${createdBooking.paidAmount.toLocaleString('en-IN')}\n\nLooking forward to working with you!`
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3.5 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-2 shadow-md transition-colors"
-                >
-                  <MessageCircle className="w-4 h-4 fill-white" />
-                  <span>Send Confirmation to Ankita on WhatsApp</span>
-                </a>
+              {/* Admin Notification & Contact Action Bar */}
+              <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 text-left space-y-3">
+                <div className="flex items-center space-x-2 text-amber-900">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Admin Notification Dispatched</span>
+                </div>
+                <p className="text-xs text-stone-600">
+                  An alert has been recorded on Ankita's Admin Dashboard. You can also send an instant SMS alert, WhatsApp message, or make a direct audio call to <span className="font-semibold text-stone-900">08617312937</span>.
+                </p>
 
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                  {/* WhatsApp to Admin */}
+                  <a
+                    id="whatsapp-admin-notify-btn"
+                    href={generateWhatsAppLink(
+                      `🚨 NEW BOOKING ALERT!\nClient: ${createdBooking.customerName}\nPhone: ${createdBooking.customerPhone}\nService: ${createdBooking.serviceName}\nDate: ${createdBooking.date}\nTime: ${createdBooking.timeSlot}\nBooking ID: ${createdBooking.id}\nPaid Advance: ₹${createdBooking.paidAmount.toLocaleString('en-IN')}\nVenue: ${createdBooking.venue}`
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2.5 px-3 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition-colors"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5 fill-white" />
+                    <span>WhatsApp</span>
+                  </a>
+
+                  {/* SMS to Admin Phone */}
+                  <a
+                    id="sms-admin-notify-btn"
+                    href={generateSmsLink(
+                      `NEW BOOKING ALERT! Client: ${createdBooking.customerName} (${createdBooking.customerPhone}), Service: ${createdBooking.serviceName}, Date: ${createdBooking.date} at ${createdBooking.timeSlot}, Advance Paid: Rs.${createdBooking.paidAmount}. ID: ${createdBooking.id}`
+                    )}
+                    className="py-2.5 px-3 bg-stone-800 hover:bg-stone-900 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition-colors"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Send SMS</span>
+                  </a>
+
+                  {/* Audio Call Admin */}
+                  <a
+                    id="call-admin-notify-btn"
+                    href="tel:08617312937"
+                    className="py-2.5 px-3 bg-[#8e512d] hover:bg-[#743e1f] text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition-colors"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Audio Call</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Navigation CTA */}
+              <div className="space-y-2 pt-1">
                 <button
                   id="view-my-bookings-btn"
                   onClick={() => {

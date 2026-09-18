@@ -78,18 +78,27 @@ export const ContactPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Phone & WhatsApp */}
+            {/* Phone & Audio Call */}
             <div className="flex items-start space-x-3.5">
               <Phone className="w-5 h-5 text-[#8e512d] shrink-0 mt-1" />
               <div className="space-y-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-stone-400">Call & Consultation</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-stone-400">Audio Call & Consultation</p>
                 <p className="text-sm font-semibold text-stone-800">{settings.phone}</p>
-                <a
-                  href={`tel:${settings.phone}`}
-                  className="text-xs text-[#8e512d] hover:underline block"
-                >
-                  Direct Voice Call
-                </a>
+                <div className="flex items-center space-x-3 pt-0.5">
+                  <a
+                    href={`tel:${settings.phone}`}
+                    className="text-xs font-semibold text-[#8e512d] hover:underline"
+                  >
+                    Direct Audio Call
+                  </a>
+                  <span className="text-stone-300">•</span>
+                  <a
+                    href={`sms:${settings.phone}?body=Hello%20Ankita%2C%20I%20want%20to%20inquire%20about%20makeup%20services.`}
+                    className="text-xs font-semibold text-stone-600 hover:underline"
+                  >
+                    Send SMS
+                  </a>
+                </div>
               </div>
             </div>
 
@@ -98,7 +107,7 @@ export const ContactPage: React.FC = () => {
               <MessageCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-1" />
               <div className="space-y-1">
                 <p className="text-xs font-bold uppercase tracking-wider text-stone-400">Instant WhatsApp</p>
-                <p className="text-sm font-semibold text-stone-800">{settings.whatsappNumber}</p>
+                <p className="text-sm font-semibold text-stone-800">{settings.whatsapp || settings.phone}</p>
                 <a
                   href={generateWhatsAppLink()}
                   target="_blank"
@@ -130,6 +139,43 @@ export const ContactPage: React.FC = () => {
                   {settings.openingTime} – {settings.closingTime}
                 </p>
                 <p className="text-xs text-stone-500">{settings.workingDays || 'Monday - Sunday'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Lead Artist Contact Card */}
+          <div className="bg-gradient-to-br from-[#faf6f2] via-white to-amber-50/60 p-5 rounded-3xl border border-amber-200/80 shadow-xs flex items-center space-x-4">
+            <div className="w-20 h-24 rounded-2xl overflow-hidden ring-2 ring-amber-400/50 shadow-md shrink-0 bg-stone-100">
+              <img
+                src={settings.artistPhoto || '/images/ankita_artist.jpg'}
+                alt="Ankita"
+                className="w-full h-full object-cover object-top"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded-md">
+                Lead Makeup Artist
+              </span>
+              <h3 className="font-serif font-bold text-stone-900 text-lg">Ankita</h3>
+              <p className="text-xs text-stone-600">Specialist in Royal Bridal & HD Makeovers</p>
+              <div className="pt-1 flex items-center space-x-2">
+                <a
+                  href={`tel:${settings.phone}`}
+                  className="px-2.5 py-1 bg-[#8e512d] text-white rounded-lg text-xs font-bold flex items-center space-x-1"
+                >
+                  <Phone className="w-3 h-3" />
+                  <span>Call Now</span>
+                </a>
+                <a
+                  href={generateWhatsAppLink("Hello Ankita! I want to consult for makeup booking.")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 bg-[#25D366] text-white rounded-lg text-xs font-bold flex items-center space-x-1"
+                >
+                  <MessageCircle className="w-3 h-3" />
+                  <span>WhatsApp</span>
+                </a>
               </div>
             </div>
           </div>

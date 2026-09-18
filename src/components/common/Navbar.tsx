@@ -18,6 +18,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications }) => {
     userProfile,
     signOut,
     loginAsDemoAdmin,
+    loginAsRipanAdmin,
     loginAsDemoCustomer,
     wishlist,
     services,
@@ -172,6 +173,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications }) => {
 
                   <div className="py-1">
                     <button
+                      id="dropdown-ripan-admin"
+                      onClick={() => {
+                        loginAsRipanAdmin();
+                        setAuthDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 flex items-center space-x-2 text-stone-800 hover:bg-[#faf4f0] hover:text-[#8e512d] font-medium"
+                    >
+                      <Shield className="w-4 h-4 text-amber-600" />
+                      <div className="text-xs">
+                        <span className="font-bold block">Login as Super Admin</span>
+                        <span className="text-[10px] text-stone-500 font-mono">ripan321321@gmail.com</span>
+                      </div>
+                    </button>
+
+                    <button
                       id="dropdown-admin-panel"
                       onClick={() => {
                         loginAsDemoAdmin();
@@ -180,7 +196,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications }) => {
                       className="w-full text-left px-4 py-2 flex items-center space-x-2 text-stone-700 hover:bg-[#faf4f0] hover:text-[#8e512d]"
                     >
                       <Shield className="w-4 h-4 text-amber-600" />
-                      <span>Switch to Admin Panel</span>
+                      <span>Admin Panel (Studio Suite)</span>
                     </button>
 
                     <button

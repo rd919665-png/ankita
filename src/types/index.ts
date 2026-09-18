@@ -153,6 +153,15 @@ export interface AppNotification {
   link?: string;
 }
 
+export interface BannerItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  imageUrl: string;
+  link?: string;
+  active: boolean;
+}
+
 export interface BusinessSettings {
   id: string;
   businessName: string;
@@ -161,6 +170,8 @@ export interface BusinessSettings {
   phone: string;
   whatsapp: string;
   email: string;
+  adminEmail?: string;
+  authorizedAdminEmails?: string[];
   address: string;
   city: string;
   state: string;
@@ -173,7 +184,19 @@ export interface BusinessSettings {
   facebook: string;
   youtube: string;
   logoUrl: string;
+  artistPhoto?: string;
   bannerUrl: string;
+  bannerTitle?: string;
+  bannerSubtitle?: string;
+  bannerSlogan?: string;
+  bannerTagline?: string;
+  bannerRightBadge?: string;
+  bannerRightQuote?: string;
+  bannerMode?: 'interactive' | 'graphic';
+  bannerTrust1?: string;
+  bannerTrust2?: string;
+  bannerTrust3?: string;
+  bannerList?: BannerItem[];
   description: string;
   openingTime: string;
   closingTime: string;

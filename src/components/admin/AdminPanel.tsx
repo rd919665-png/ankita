@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Shield,
   Calendar,
@@ -22,6 +22,10 @@ import {
   Sparkles,
   Search,
   ExternalLink,
+  Phone,
+  MessageCircle,
+  Mail,
+  Bell,
 } from 'lucide-react';
 import { useApp } from '@/src/context/AppContext.tsx';
 import {
@@ -35,9 +39,11 @@ import {
   ServiceItem,
 } from '@/src/types/index.ts';
 import { defaultBusinessSettings } from '@/src/data/defaultData.ts';
+import { BannerManager } from '@/src/components/admin/BannerManager.tsx';
 
 type AdminTab =
   | 'overview'
+  | 'banner'
   | 'bookings'
   | 'services'
   | 'packages'
@@ -97,6 +103,10 @@ export const AdminPanel: React.FC = () => {
   // Business Details Form State (27 fields)
   const [businessForm, setBusinessForm] = useState<BusinessSettings>({ ...settings });
   const [saveSuccessMessage, setSaveSuccessMessage] = useState(false);
+
+  useEffect(() => {
+    setBusinessForm({ ...settings });
+  }, [settings]);
 
   // Filtered Bookings
   const filteredBookings = bookings.filter((b) => {
@@ -173,6 +183,7 @@ export const AdminPanel: React.FC = () => {
       <div className="flex space-x-2 border-b border-stone-200 pb-2 overflow-x-auto no-scrollbar">
         {[
           { key: 'overview', label: 'Dashboard', icon: TrendingUp },
+          { key: 'banner', label: 'ব্যানার কন্ট্রোল (Banner)', icon: Sparkles },
           { key: 'bookings', label: `Bookings (${bookings.length})`, icon: Calendar },
           { key: 'services', label: `Services (${services.length})`, icon: Layers },
           { key: 'packages', label: `Packages (${packages.length})`, icon: Package },
@@ -200,6 +211,9 @@ export const AdminPanel: React.FC = () => {
           );
         })}
       </div>
+
+      {/* ================= TAB: BANNER MANAGEMENT & ADMIN EMAILS ================= */}
+      {activeTab === 'banner' && <BannerManager />}
 
       {/* ================= TAB 1: OVERVIEW DASHBOARD ================= */}
       {activeTab === 'overview' && (
@@ -352,6 +366,41 @@ export const AdminPanel: React.FC = () => {
       {/* ================= TAB 2: BOOKINGS MANAGEMENT ================= */}
       {activeTab === 'bookings' && (
         <div className="space-y-6">
+          {/* Admin SMS / Mobile Notification Banner */}
+          <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-[#8e512d] flex items-center justify-center shrink-0">
+                <Bell className="w-5 h-5 animate-bounce" />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                  Admin Alert Receiver: {settings.phone} (Audio Call & WhatsApp)
+                </p>
+                <p className="text-xs text-stone-600">
+                  Whenever a client books, sound chimes & haptic vibration fire, and instant SMS / WhatsApp links are prepared for <span className="font-semibold">{settings.artistName}</span>.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 shrink-0">
+              <a
+                href={`tel:${settings.phone}`}
+                className="px-3 py-1.5 bg-[#8e512d] hover:bg-[#743e1f] text-white rounded-lg text-xs font-bold flex items-center space-x-1 shadow-xs"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>Call Admin Phone</span>
+              </a>
+              <a
+                href={`https://wa.me/918617312937?text=${encodeURIComponent('Admin Status Check: Booking system notifications active.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg text-xs font-bold flex items-center space-x-1 shadow-xs"
+              >
+                <MessageCircle className="w-3.5 h-3.5 fill-white" />
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+
           {/* Controls */}
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
             <div className="relative w-full sm:w-80">
@@ -392,7 +441,7 @@ export const AdminPanel: React.FC = () => {
                 <thead>
                   <tr className="bg-[#faf8f5] border-b border-stone-200 text-stone-500 uppercase tracking-wider text-[10px]">
                     <th className="p-4">Booking ID</th>
-                    <th className="p-4">Customer</th>
+                    <th className="p-4">Customer & Contact</th>
                     <th className="p-4">Service</th>
                     <th className="p-4">Date & Slot</th>
                     <th className="p-4">Financials</th>
@@ -400,50 +449,81 @@ export const AdminPanel: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
-                  {filteredBookings.map((b) => (
-                    <tr key={b.id} className="hover:bg-stone-50">
-                      <td className="p-4 font-mono font-bold text-stone-900">{b.id}</td>
-                      <td className="p-4">
-                        <div className="font-semibold text-stone-900">{b.customerName}</div>
-                        <div className="text-[11px] text-stone-500">{b.customerPhone}</div>
-                        <div className="text-[10px] text-stone-400">{b.customerEmail}</div>
-                      </td>
-                      <td className="p-4">
-                        <div className="font-semibold text-stone-800">{b.serviceName}</div>
-                        <div className="text-[11px] text-stone-500">{b.venue || 'Studio'}</div>
-                      </td>
-                      <td className="p-4">
-                        <div className="font-semibold text-stone-900">{b.date}</div>
-                        <div className="text-stone-500">{b.timeSlot}</div>
-                      </td>
-                      <td className="p-4">
-                        <div className="text-emerald-700 font-bold">
-                          Paid: ₹{b.paidAmount.toLocaleString('en-IN')}
-                        </div>
-                        <div className="text-[11px] text-stone-500">
-                          Due: ₹{b.remainingAmount.toLocaleString('en-IN')}
-                        </div>
-                        <div className="text-[10px] text-stone-400">Total: ₹{b.totalAmount.toLocaleString('en-IN')}</div>
-                      </td>
-                      <td className="p-4">
-                        <select
-                          value={b.bookingStatus}
-                          onChange={(e) =>
-                            updateBookingStatus(b.id, e.target.value as BookingStatus)
-                          }
-                          aria-label={`Update status for booking ${b.id}`}
-                          className="bg-white border border-stone-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-stone-800 focus:outline-none"
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Confirmed">Confirmed</option>
-                          <option value="Paid">Paid</option>
-                          <option value="Completed">Completed</option>
-                          <option value="Cancelled">Cancelled</option>
-                          <option value="Rescheduled">Rescheduled</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredBookings.map((b) => {
+                    const cleanPhone = b.customerPhone ? b.customerPhone.replace(/[^0-9]/g, '') : '';
+                    const waPhone = cleanPhone.startsWith('91') ? cleanPhone : cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone.startsWith('0') && cleanPhone.length === 11 ? `91${cleanPhone.slice(1)}` : cleanPhone;
+                    const smsBody = encodeURIComponent(`Hello ${b.customerName}, regarding your booking (${b.id}) for ${b.serviceName} on ${b.date} (${b.timeSlot}) with Ankita Makeup Artist.`);
+
+                    return (
+                      <tr key={b.id} className="hover:bg-stone-50">
+                        <td className="p-4 font-mono font-bold text-stone-900">{b.id}</td>
+                        <td className="p-4">
+                          <div className="font-semibold text-stone-900">{b.customerName}</div>
+                          <div className="text-[11px] text-stone-500 font-mono">{b.customerPhone}</div>
+                          <div className="text-[10px] text-stone-400">{b.customerEmail}</div>
+                          <div className="flex items-center space-x-2 pt-1.5">
+                            <a
+                              href={`tel:${b.customerPhone}`}
+                              title="Audio Call Client"
+                              className="p-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700"
+                            >
+                              <Phone className="w-3 h-3" />
+                            </a>
+                            <a
+                              href={`sms:${b.customerPhone}?body=${smsBody}`}
+                              title="Send SMS to Client"
+                              className="px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 text-[10px] font-bold"
+                            >
+                              SMS
+                            </a>
+                            <a
+                              href={`https://wa.me/${waPhone}?text=${smsBody}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="WhatsApp Client"
+                              className="p-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700"
+                            >
+                              <MessageCircle className="w-3 h-3" />
+                            </a>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="font-semibold text-stone-800">{b.serviceName}</div>
+                          <div className="text-[11px] text-stone-500">{b.venue || 'Studio'}</div>
+                        </td>
+                        <td className="p-4">
+                          <div className="font-semibold text-stone-900">{b.date}</div>
+                          <div className="text-stone-500">{b.timeSlot}</div>
+                        </td>
+                        <td className="p-4">
+                          <div className="text-emerald-700 font-bold">
+                            Paid: ₹{b.paidAmount.toLocaleString('en-IN')}
+                          </div>
+                          <div className="text-[11px] text-stone-500">
+                            Due: ₹{b.remainingAmount.toLocaleString('en-IN')}
+                          </div>
+                          <div className="text-[10px] text-stone-400">Total: ₹{b.totalAmount.toLocaleString('en-IN')}</div>
+                        </td>
+                        <td className="p-4">
+                          <select
+                            value={b.bookingStatus}
+                            onChange={(e) =>
+                              updateBookingStatus(b.id, e.target.value as BookingStatus)
+                            }
+                            aria-label={`Update status for booking ${b.id}`}
+                            className="bg-white border border-stone-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-stone-800 focus:outline-none"
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                            <option value="Rescheduled">Rescheduled</option>
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1165,6 +1245,34 @@ export const AdminPanel: React.FC = () => {
                     onChange={(e) => setBusinessForm({ ...businessForm, bannerUrl: e.target.value })}
                     className="w-full px-3 py-2 bg-[#faf8f5] border border-stone-200 rounded-xl text-xs"
                   />
+                </div>
+
+                {/* 19.5 Makeup Artist Photo URL */}
+                <div className="sm:col-span-2 bg-amber-50/50 p-3.5 rounded-2xl border border-amber-200/80">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="w-16 h-20 rounded-xl overflow-hidden ring-2 ring-amber-300 shrink-0 bg-stone-200">
+                      <img
+                        src={businessForm.artistPhoto || '/images/ankita_artist.jpg'}
+                        alt="Ankita Photo Preview"
+                        className="w-full h-full object-cover object-top"
+                      />
+                    </div>
+                    <div className="flex-1 w-full">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-amber-900 mb-1">
+                        Makeup Artist Profile Photo (Featured on Hero Banner & Bio)
+                      </label>
+                      <input
+                        type="text"
+                        value={businessForm.artistPhoto || '/images/ankita_artist.jpg'}
+                        onChange={(e) => setBusinessForm({ ...businessForm, artistPhoto: e.target.value })}
+                        placeholder="/images/ankita_artist.jpg"
+                        className="w-full px-3 py-2 bg-white border border-amber-300/80 rounded-xl text-xs font-mono"
+                      />
+                      <p className="text-[11px] text-stone-500 mt-1">
+                        This photograph of Ankita is featured on the homepage hero banner card, direct consultation modules, and artist bio.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* 20. Business Description */}

@@ -14,6 +14,7 @@ import { auth, db, googleProvider, handleFirestoreError, OperationType } from '@
 import {
   ActivePage,
   AppNotification,
+  BannerItem,
   Booking,
   BusinessSettings,
   CouponItem,
@@ -48,11 +49,16 @@ interface AppContextType {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   loginAsDemoAdmin: () => void;
+  loginAsRipanAdmin: () => void;
+  loginWithAdminEmail: (email: string) => Promise<boolean>;
   loginAsDemoCustomer: () => void;
 
-  // Business Settings
+  // Business Settings & Banner
   settings: BusinessSettings;
   updateBusinessSettings: (newSettings: Partial<BusinessSettings>) => Promise<void>;
+  addBanner: (banner: Omit<BannerItem, 'id'>) => Promise<void>;
+  deleteBanner: (id: string) => Promise<void>;
+  setActiveBanner: (id: string) => Promise<void>;
 
   // Data Collections
   services: ServiceItem[];
@@ -129,6 +135,7 @@ interface AppContextType {
   // Utility
   applyCoupon: (code: string, amount: number) => { valid: boolean; discount: number; message: string };
   generateWhatsAppLink: (customMessage?: string) => string;
+  generateSmsLink: (customMessage?: string) => string;
   seedInitialDataToFirestore: () => Promise<void>;
 }
 
@@ -143,10 +150,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Business Settings state (with persistent fallback)
   const [settings, setSettings] = useState<BusinessSettings>(() => {
-    const cached = localStorage.getItem('ankita_business_settings');
+    const cached = localStorage.getItem('ankita_business_settings_v4');
     if (cached) {
       try {
-        return JSON.parse(cached);
+        const parsed = JSON.parse(cached);
+        if (parsed.phone === '08617312937' || parsed.phone === '+91 86173 12937') {
+          return {
+            ...defaultBusinessSettings,
+            ...parsed,
+            artistPhoto: parsed.artistPhoto || defaultBusinessSettings.artistPhoto,
+          };
+        }
       } catch {
         // use default
       }
@@ -156,12 +170,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Services, packages, portfolio, reviews, coupons, offers, bookings
   const [services, setServices] = useState<ServiceItem[]>(() => {
-    const cached = localStorage.getItem('ankita_services');
+    const cached = localStorage.getItem('ankita_services_v4');
     return cached ? JSON.parse(cached) : defaultServices;
   });
 
   const [packages, setPackages] = useState<PackageItem[]>(() => {
-    const cached = localStorage.getItem('ankita_packages');
+    const cached = localStorage.getItem('ankita_packages_v4');
     return cached ? JSON.parse(cached) : defaultPackages;
   });
 
@@ -215,15 +229,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Sync state to LocalStorage
   useEffect(() => {
-    localStorage.setItem('ankita_business_settings', JSON.stringify(settings));
+    localStorage.setItem('ankita_business_settings_v4', JSON.stringify(settings));
   }, [settings]);
 
   useEffect(() => {
-    localStorage.setItem('ankita_services', JSON.stringify(services));
+    localStorage.setItem('ankita_services_v4', JSON.stringify(services));
   }, [services]);
 
   useEffect(() => {
-    localStorage.setItem('ankita_packages', JSON.stringify(packages));
+    localStorage.setItem('ankita_packages_v4', JSON.stringify(packages));
   }, [packages]);
 
   useEffect(() => {
@@ -256,9 +270,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Determine admin status:
         // 1. Check if email is owner email (from runtime metadata or settings)
         // 2. Or check firestore /admins/{uid}
+        const userEmailLower = (user.email || '').toLowerCase().trim();
         const isMasterEmail =
-          user.email === 'ripan321321@gmail.com' ||
-          (settings.email && user.email === settings.email);
+          userEmailLower === 'ripan321321@gmail.com' ||
+          (settings.email && userEmailLower === settings.email.toLowerCase().trim()) ||
+          (settings.adminEmail && userEmailLower === settings.adminEmail.toLowerCase().trim()) ||
+          (settings.authorizedAdminEmails &&
+            settings.authorizedAdminEmails.some(
+              (e) => e.toLowerCase().trim() === userEmailLower
+            )) ||
+          userEmailLower === 'ankita.makeupstudio@gmail.com';
 
         if (isMasterEmail) {
           setIsAdmin(true);
@@ -275,16 +296,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         setUserProfile({
           id: user.uid,
-          name: user.displayName || 'Valued Client',
+          name:
+            userEmailLower === 'ripan321321@gmail.com'
+              ? 'Ripan (Super Admin)'
+              : user.displayName || 'Valued Client',
           email: user.email || '',
           phone: user.phoneNumber || '',
           wishlist: wishlist,
         });
       } else {
-        // Check if demo admin mode is flagged in session
+        // Check if demo/session admin mode is flagged
         const demoAdmin = sessionStorage.getItem('ankita_demo_admin');
+        const adminEmail = sessionStorage.getItem('ankita_admin_email');
         if (demoAdmin === 'true') {
           setIsAdmin(true);
+          setUserProfile({
+            id: 'admin-ripan',
+            name:
+              adminEmail === 'ripan321321@gmail.com' || !adminEmail
+                ? 'Ripan (Super Admin)'
+                : 'Ankita (Artist & Admin)',
+            email: adminEmail || 'ripan321321@gmail.com',
+            phone: settings.phone,
+          });
         } else {
           setIsAdmin(false);
         }
@@ -292,7 +326,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     return () => unsubscribe();
-  }, [settings.email, wishlist]);
+  }, [settings.email, settings.adminEmail, settings.authorizedAdminEmails, settings.phone, wishlist]);
 
   // Realtime or initial fetch for Business Settings from Firestore
   useEffect(() => {
@@ -437,18 +471,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsAdmin(false);
   }, []);
 
-  // Demo switchers for easy evaluation
+  // Demo and direct Admin switchers
   const loginAsDemoAdmin = useCallback(() => {
     sessionStorage.setItem('ankita_demo_admin', 'true');
+    sessionStorage.setItem('ankita_admin_email', settings.email || 'ripan321321@gmail.com');
     setIsAdmin(true);
     setUserProfile({
       id: 'admin-ankita',
       name: 'Ankita (Artist & Admin)',
-      email: settings.email || 'ankita.makeupstudio@gmail.com',
+      email: settings.email || 'ripan321321@gmail.com',
       phone: settings.phone,
     });
     setActivePage('admin');
   }, [settings]);
+
+  const loginAsRipanAdmin = useCallback(() => {
+    sessionStorage.setItem('ankita_demo_admin', 'true');
+    sessionStorage.setItem('ankita_admin_email', 'ripan321321@gmail.com');
+    setIsAdmin(true);
+    setUserProfile({
+      id: 'admin-ripan-master',
+      name: 'Ripan (Super Admin)',
+      email: 'ripan321321@gmail.com',
+      phone: settings.phone,
+    });
+    setActivePage('admin');
+  }, [settings.phone]);
+
+  const loginWithAdminEmail = useCallback(
+    async (inputEmail: string): Promise<boolean> => {
+      const cleanInput = inputEmail.trim().toLowerCase();
+      const authorizedList = [
+        'ripan321321@gmail.com',
+        (settings.email || '').trim().toLowerCase(),
+        (settings.adminEmail || '').trim().toLowerCase(),
+        ...(settings.authorizedAdminEmails || []).map((e) => e.trim().toLowerCase()),
+        'ankita.makeupstudio@gmail.com',
+      ].filter(Boolean);
+
+      if (authorizedList.includes(cleanInput)) {
+        sessionStorage.setItem('ankita_demo_admin', 'true');
+        sessionStorage.setItem('ankita_admin_email', cleanInput);
+        setIsAdmin(true);
+        setUserProfile({
+          id: `admin-${cleanInput.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          name:
+            cleanInput === 'ripan321321@gmail.com'
+              ? 'Ripan (Super Admin)'
+              : 'Studio Admin',
+          email: cleanInput,
+          phone: settings.phone,
+        });
+        setActivePage('admin');
+        return true;
+      }
+      return false;
+    },
+    [settings]
+  );
 
   const loginAsDemoCustomer = useCallback(() => {
     sessionStorage.removeItem('ankita_demo_admin');
@@ -528,19 +608,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Save locally first for instantaneous UX
       setBookings((prev) => [newBooking, ...prev]);
 
-      // Add Notification
-      setNotifications((prev) => [
-        {
-          id: `notif-${Date.now()}`,
-          recipientId: newBooking.customerId,
-          title: `Booking Confirmed: ${newBooking.serviceName}`,
-          message: `Your appointment for ${newBooking.date} at ${newBooking.timeSlot} is recorded! Booking ID: ${newBookingId}`,
-          type: 'booking',
-          read: false,
-          createdAt: now,
-        },
-        ...prev,
-      ]);
+      // Admin & Client Notifications with Sound and Vibration
+      const adminNotif: AppNotification = {
+        id: `notif-admin-${Date.now()}`,
+        recipientId: 'admin',
+        title: `🚨 NEW BOOKING: ${newBooking.customerName}`,
+        message: `Client ${newBooking.customerName} (${newBooking.customerPhone}) booked ${newBooking.serviceName} for ${newBooking.date} at ${newBooking.timeSlot}. Advance: ₹${newBooking.paidAmount.toLocaleString('en-IN')}`,
+        type: 'booking',
+        read: false,
+        createdAt: now,
+      };
+
+      const clientNotif: AppNotification = {
+        id: `notif-${Date.now()}`,
+        recipientId: newBooking.customerId,
+        title: `Booking Confirmed: ${newBooking.serviceName}`,
+        message: `Your appointment for ${newBooking.date} at ${newBooking.timeSlot} is recorded! Booking ID: ${newBookingId}`,
+        type: 'booking',
+        read: false,
+        createdAt: now,
+      };
+
+      // Play alert chime and vibration for admin/customer confirmation
+      try {
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (AudioContextClass) {
+          const audioCtx = new AudioContextClass();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+          osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.12); // A5
+          gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.4);
+        }
+        if ('vibrate' in navigator) {
+          navigator.vibrate([200, 100, 200]);
+        }
+      } catch {
+        // audio context not allowed without interaction or not supported
+      }
+
+      setNotifications((prev) => [adminNotif, clientNotif, ...prev]);
 
       // Save to Firestore
       try {
@@ -614,6 +727,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     },
     [settings]
+  );
+
+  // Banner Operations
+  const addBanner = useCallback(
+    async (banner: Omit<BannerItem, 'id'>) => {
+      const newBanner: BannerItem = {
+        ...banner,
+        id: `banner-${Date.now()}`,
+      };
+      const currentList = settings.bannerList || [];
+      const updatedList = [newBanner, ...currentList];
+      await updateBusinessSettings({ bannerList: updatedList });
+    },
+    [settings.bannerList, updateBusinessSettings]
+  );
+
+  const deleteBanner = useCallback(
+    async (id: string) => {
+      const currentList = settings.bannerList || [];
+      const updatedList = currentList.filter((b) => b.id !== id);
+      await updateBusinessSettings({ bannerList: updatedList });
+    },
+    [settings.bannerList, updateBusinessSettings]
+  );
+
+  const setActiveBanner = useCallback(
+    async (id: string) => {
+      const currentList = settings.bannerList || [];
+      const target = currentList.find((b) => b.id === id);
+      const updatedList = currentList.map((b) => ({
+        ...b,
+        active: b.id === id,
+      }));
+      await updateBusinessSettings({
+        bannerList: updatedList,
+        bannerUrl: target ? target.imageUrl : settings.bannerUrl,
+        artistPhoto: target ? target.imageUrl : settings.artistPhoto,
+      });
+    },
+    [settings.bannerList, settings.bannerUrl, settings.artistPhoto, updateBusinessSettings]
   );
 
   // Admin Service Operations
@@ -796,10 +949,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Dynamic WhatsApp Link Generator
   const generateWhatsAppLink = useCallback(
     (customMessage?: string): string => {
-      const cleanNumber = (settings.whatsapp || settings.phone || '').replace(/[^0-9]/g, '');
-      const defaultMsg = `Hello Ankita! I am interested in booking your luxury makeup services. Could you please share slot details?`;
+      let cleanNumber = (settings.whatsapp || settings.phone || '08617312937').replace(/[^0-9]/g, '');
+      if (cleanNumber.startsWith('0') && cleanNumber.length === 11) {
+        cleanNumber = '91' + cleanNumber.substring(1);
+      } else if (cleanNumber.length === 10) {
+        cleanNumber = '91' + cleanNumber;
+      }
+      const defaultMsg = `Hello Ankita! I am interested in booking your makeup services (Bridal / HD / Haldi / Party). Could you please share slot details?`;
       const text = encodeURIComponent(customMessage || defaultMsg);
       return `https://wa.me/${cleanNumber}?text=${text}`;
+    },
+    [settings]
+  );
+
+  // Dynamic SMS Link Generator for Admin Phone Notification
+  const generateSmsLink = useCallback(
+    (customMessage?: string): string => {
+      const cleanNumber = (settings.phone || '08617312937').replace(/[^0-9]/g, '');
+      const defaultMsg = `Hello Ankita! New makeup booking inquiry.`;
+      const text = encodeURIComponent(customMessage || defaultMsg);
+      return `sms:${cleanNumber}?body=${text}`;
     },
     [settings]
   );
@@ -951,9 +1120,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         signInWithGoogle,
         signOut,
         loginAsDemoAdmin,
+        loginAsRipanAdmin,
+        loginWithAdminEmail,
         loginAsDemoCustomer,
         settings,
         updateBusinessSettings,
+        addBanner,
+        deleteBanner,
+        setActiveBanner,
         services,
         packages,
         portfolio,
@@ -990,6 +1164,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteCoupon,
         applyCoupon,
         generateWhatsAppLink,
+        generateSmsLink,
         seedInitialDataToFirestore,
         adminStats,
         updateSettings: updateBusinessSettings,

@@ -98,7 +98,7 @@ export const Footer: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Phone className="w-4 h-4 text-amber-400 shrink-0" />
                 <a href={`tel:${settings.phone}`} className="hover:underline">
-                  {settings.phone}
+                  {settings.phone} (Audio Call)
                 </a>
               </div>
 
@@ -110,7 +110,7 @@ export const Footer: React.FC = () => {
                   rel="noopener noreferrer"
                   className="hover:underline text-emerald-400"
                 >
-                  WhatsApp: {settings.whatsappNumber}
+                  WhatsApp: {settings.whatsapp || settings.phone}
                 </a>
               </div>
             </div>

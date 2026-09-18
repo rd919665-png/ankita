@@ -11,9 +11,11 @@ import {
   ChevronRight,
   Phone,
   Heart,
+  MessageCircle,
 } from 'lucide-react';
 import { useApp } from '@/src/context/AppContext.tsx';
 import { PackageItem, ServiceItem } from '@/src/types/index.ts';
+import { HeroBanner } from '@/src/components/home/HeroBanner.tsx';
 
 export const HomePage: React.FC = () => {
   const {
@@ -49,96 +51,8 @@ export const HomePage: React.FC = () => {
 
   return (
     <div id="home-page-container" className="space-y-16 sm:space-y-24 pb-20">
-      {/* 1. HERO SECTION */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#211b17] via-[#2d241f] to-[#1a1512] text-white">
-        {/* Subtle background ambient overlay */}
-        <div className="absolute inset-0 opacity-25 mix-blend-overlay pointer-events-none">
-          <img
-            src={settings.bannerUrl || 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=1600&auto=format&fit=crop&q=80'}
-            alt="Luxury Beauty Studio"
-            className="w-full h-full object-cover object-center filter blur-xs"
-          />
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-32 grid lg:grid-cols-12 gap-12 items-center">
-          <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-xs tracking-wider uppercase">
-              <Award className="w-3.5 h-3.5 text-amber-400" />
-              <span>Award-Winning Bridal & HD Airbrush Artistry</span>
-            </div>
-
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif tracking-tight text-[#fbf6f0] leading-[1.12]">
-              Timeless Elegance For Your Most Cherished Celebrations
-            </h1>
-
-            <p className="text-base sm:text-lg text-[#d8c8bc] font-light max-w-2xl leading-relaxed">
-              {settings.description ||
-                'Specializing in handcrafted Royal Bengali Bridal with Chandan art, 24-hour waterproof HD Airbrush, and red-carpet reception glam.'}
-            </p>
-
-            {/* CTAs */}
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-              <button
-                id="hero-book-appointment-btn"
-                onClick={() => {
-                  const target = services[0];
-                  if (target) openBookingModal(target, 'service');
-                }}
-                className="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 hover:from-amber-600 hover:to-amber-800 text-white font-medium text-sm uppercase tracking-wider shadow-lg hover:shadow-amber-600/30 transition-all flex items-center justify-center space-x-2 group cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4 text-amber-200 group-hover:rotate-12 transition-transform" />
-                <span>Book Your Makeup Appointment</span>
-              </button>
-
-              <button
-                id="hero-view-portfolio-btn"
-                onClick={() => setActivePage('portfolio')}
-                className="w-full sm:w-auto px-7 py-4 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-[#fbf6f0] font-medium text-sm tracking-wider uppercase transition-all flex items-center justify-center space-x-2 cursor-pointer"
-              >
-                <span>View Portfolio</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Trust Highlights */}
-            <div className="pt-6 grid grid-cols-3 gap-4 border-t border-white/10 text-center lg:text-left">
-              <div>
-                <p className="text-2xl sm:text-3xl font-serif text-amber-300 font-bold">500+</p>
-                <p className="text-[11px] uppercase tracking-wider text-[#b8a497]">Brides Adorned</p>
-              </div>
-              <div>
-                <p className="text-2xl sm:text-3xl font-serif text-amber-300 font-bold">4.9 ★</p>
-                <p className="text-[11px] uppercase tracking-wider text-[#b8a497]">Verified Reviews</p>
-              </div>
-              <div>
-                <p className="text-2xl sm:text-3xl font-serif text-amber-300 font-bold">100%</p>
-                <p className="text-[11px] uppercase tracking-wider text-[#b8a497]">Sanitized Tools</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Hero Visual Card */}
-          <div className="lg:col-span-5 flex justify-center">
-            <div className="relative w-full max-w-sm sm:max-w-md">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white/10 aspect-[3/4]">
-                <img
-                  src="https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&auto=format&fit=crop&q=80"
-                  alt="Ankita Bridal Makeup Look"
-                  className="w-full h-full object-cover object-top"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                <div className="absolute bottom-6 left-6 right-6 text-left">
-                  <span className="px-3 py-1 rounded-full bg-amber-500/90 text-stone-900 text-xs font-bold uppercase tracking-wider">
-                    Signature Artistry
-                  </span>
-                  <p className="text-xl font-serif font-bold text-white mt-2">Royal Bengali Bridal Makeup</p>
-                  <p className="text-xs text-amber-200">With intricate forehead Chandan work & Alta styling</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* 1. HERO BANNER - DESIGNED EXACTLY LIKE THE PROVIDED LUXURY ARTIST BANNER */}
+      <HeroBanner />
 
       {/* 2. SPECIAL OFFERS BANNER */}
       {offers.length > 0 && (
@@ -363,7 +277,114 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* 6. INTERNATIONAL LUXURY BRANDS USED */}
+      {/* 5.5 MEET THE ARTIST: ANKITA */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-br from-[#faf6f2] via-white to-[#f5ece5] rounded-3xl p-6 sm:p-10 lg:p-12 border border-[#ebdcd1] shadow-md grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          {/* Artist Portrait Column */}
+          <div className="lg:col-span-5 flex justify-center">
+            <div className="relative w-full max-w-sm">
+              <div className="relative rounded-3xl overflow-hidden shadow-xl border-4 border-white aspect-[3/4] bg-stone-100 ring-1 ring-amber-300/40">
+                <img
+                  src={settings.artistPhoto || '/images/ankita_artist.jpg'}
+                  alt="Ankita - Professional Makeup Artist"
+                  className="w-full h-full object-cover object-top"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute bottom-5 left-5 right-5 text-white text-left">
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-stone-950 text-[10px] font-bold uppercase tracking-wider">
+                    Lead Makeup Artist
+                  </span>
+                  <p className="text-xl font-serif font-bold mt-1">Ankita</p>
+                  <p className="text-xs text-amber-200">Certified Bridal & HD Beauty Specialist</p>
+                </div>
+              </div>
+
+              {/* Floating Stat Badge */}
+              <div className="absolute -bottom-4 -right-2 sm:right-2 bg-white px-4 py-2.5 rounded-2xl shadow-lg border border-amber-200/80 flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-[#8e512d] flex items-center justify-center font-serif font-bold text-sm">
+                  8+
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Experience</p>
+                  <p className="text-xs font-semibold text-stone-800">Years of Artistry</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Artist Bio & Credentials */}
+          <div className="lg:col-span-7 space-y-5 text-left">
+            <div className="space-y-2">
+              <span className="text-xs uppercase font-bold tracking-[0.2em] text-[#8e512d]">
+                Meet Your Makeup Artist
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-serif text-stone-900 leading-tight">
+                "Every Face Has A Story, I Help You Radiate Its Beauty"
+              </h2>
+            </div>
+
+            <p className="text-sm text-stone-600 leading-relaxed font-normal">
+              Welcome to Ankita Makeup Studio! I believe every bride and woman deserves to feel radiantly confident, comfortable, and timeless on her most special celebrations. Whether you desire the classical grandeur of Royal Bengali bridal with delicate Chandan artistry, 24-hour waterproof HD Airbrush makeup, or modern soft glam, every look is personalized to your unique skin tone, facial contours, and wedding attire.
+            </p>
+
+            {/* Quality Checklist */}
+            <div className="grid sm:grid-cols-2 gap-3 pt-2">
+              <div className="flex items-start space-x-2.5">
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span className="text-xs font-medium text-stone-700">100% Authentic Luxury Brands (MAC, Huda, Bobbi Brown)</span>
+              </div>
+              <div className="flex items-start space-x-2.5">
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span className="text-xs font-medium text-stone-700">Hospital-Grade Sterilized Brushes & Applicators</span>
+              </div>
+              <div className="flex items-start space-x-2.5">
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span className="text-xs font-medium text-stone-700">Specialized Chandan Forehead Art & Saree Draping</span>
+              </div>
+              <div className="flex items-start space-x-2.5">
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span className="text-xs font-medium text-stone-700">Studio Appointments & Destination Venue Visits</span>
+              </div>
+            </div>
+
+            {/* Direct Connect Buttons */}
+            <div className="pt-3 flex flex-wrap items-center gap-3">
+              <button
+                id="artist-bio-book-btn"
+                onClick={() => {
+                  const target = services[0];
+                  if (target) openBookingModal(target, 'service');
+                }}
+                className="px-6 py-3 rounded-full bg-[#8e512d] hover:bg-[#743e1f] text-white text-xs font-bold uppercase tracking-wider shadow-md transition-all flex items-center space-x-2 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Book Appointment With Ankita</span>
+              </button>
+
+              <a
+                id="artist-bio-call-btn"
+                href={`tel:${settings.phone}`}
+                className="px-5 py-3 rounded-full bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 text-xs font-bold flex items-center space-x-2 shadow-xs transition-colors"
+              >
+                <Phone className="w-3.5 h-3.5 text-[#8e512d]" />
+                <span>Call: {settings.phone}</span>
+              </a>
+
+              <a
+                id="artist-bio-wa-btn"
+                href={generateWhatsAppLink("Hello Ankita! I would like to speak with you regarding bridal/party makeup booking.")}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-5 py-3 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold flex items-center space-x-2 shadow-xs transition-colors"
+              >
+                <MessageCircle className="w-3.5 h-3.5 fill-white" />
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
       <section className="bg-[#f5ece5] py-12 border-y border-[#ebdcd1]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-xs uppercase tracking-[0.25em] text-[#8e6e58] font-bold mb-6">
