@@ -155,10 +155,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const parsed = JSON.parse(cached);
         if (parsed.phone === '08617312937' || parsed.phone === '+91 86173 12937') {
+          const resolvedBanner =
+            parsed.bannerUrl && !parsed.bannerUrl.startsWith('blob:')
+              ? parsed.bannerUrl
+              : '/images/hero_banner_full.jpg';
           return {
             ...defaultBusinessSettings,
             ...parsed,
             artistPhoto: parsed.artistPhoto || defaultBusinessSettings.artistPhoto,
+            bannerUrl: resolvedBanner,
           };
         }
       } catch {

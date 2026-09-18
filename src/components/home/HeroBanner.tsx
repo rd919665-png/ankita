@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   Sparkles,
@@ -21,6 +21,42 @@ export const HeroBanner: React.FC = () => {
   const [showFullBannerModal, setShowFullBannerModal] = useState(false);
   const [viewMode, setViewMode] = useState<'poster' | 'interactive'>('poster');
 
+  // Candidate fallback paths for the banner image to guarantee it always renders
+  const BANNER_FALLBACKS = [
+    '/images/hero_banner_full.jpg',
+    '/images/ankita_banner.jpg',
+    '/images/ankita_banner.png',
+    '/images/user_banner.jpg',
+    '/images/user_banner.png',
+  ];
+
+  const [currentBannerUrl, setCurrentBannerUrl] = useState<string>(() => {
+    if (settings.bannerUrl && !settings.bannerUrl.startsWith('blob:')) {
+      return settings.bannerUrl;
+    }
+    return '/images/hero_banner_full.jpg';
+  });
+  const [bannerLoaded, setBannerLoaded] = useState(false);
+  const [fallbackAttempt, setFallbackAttempt] = useState(0);
+
+  useEffect(() => {
+    if (settings.bannerUrl && !settings.bannerUrl.startsWith('blob:')) {
+      setCurrentBannerUrl(settings.bannerUrl);
+    } else {
+      setCurrentBannerUrl('/images/hero_banner_full.jpg');
+    }
+    setFallbackAttempt(0);
+    setBannerLoaded(false);
+  }, [settings.bannerUrl]);
+
+  const handleBannerImgError = () => {
+    if (fallbackAttempt < BANNER_FALLBACKS.length) {
+      const nextUrl = BANNER_FALLBACKS[fallbackAttempt];
+      setFallbackAttempt((prev) => prev + 1);
+      setCurrentBannerUrl(nextUrl);
+    }
+  };
+
   // Dynamic banner configurations from settings
   const title = settings.bannerTitle || 'Makeup';
   const subtitle = settings.bannerSubtitle || 'A R T I S T';
@@ -28,7 +64,7 @@ export const HeroBanner: React.FC = () => {
   const tagline = settings.bannerTagline || 'Your Beauty Our Passion ♡';
   const rightBadge = settings.bannerRightBadge || 'BEAUTY BEGINS WITH SELF LOVE';
   const rightQuote = settings.bannerRightQuote || 'Be Your Own Kind of Beautiful';
-  const bannerImage = settings.bannerUrl || settings.artistPhoto || '/images/hero_banner_full.jpg';
+  const bannerImage = currentBannerUrl;
   const trust1 = settings.bannerTrust1 || 'Professional Service';
   const trust2 = settings.bannerTrust2 || '100% Hygiene';
   const trust3 = settings.bannerTrust3 || 'Natural & Long Lasting Look';
@@ -232,18 +268,37 @@ export const HeroBanner: React.FC = () => {
               {/* Full Banner Poster Container */}
               <div 
                 onClick={() => setShowFullBannerModal(true)}
-                className="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 border-white/90 bg-stone-950 group cursor-pointer ring-2 ring-rose-200/60"
+                className="relative w-full aspect-[16/10] sm:aspect-[16/9] md:aspect-[3/2] min-h-[220px] sm:min-h-[360px] md:min-h-[460px] max-h-[600px] rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 border-rose-200/90 bg-gradient-to-br from-[#6b0f2b] via-[#851238] to-[#590a21] group cursor-pointer ring-2 ring-rose-200/60 flex items-center justify-center"
                 title="Click to view full high-resolution banner"
               >
+                {/* Background ambient pattern */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#f43f5e22,transparent_70%)] pointer-events-none" />
+
+                {/* Shimmer loading placeholder */}
+                {!bannerLoaded && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#590a21] via-[#7d1235] to-[#590a21] animate-pulse flex flex-col items-center justify-center text-rose-100 space-y-2 z-0">
+                    <Sparkles className="w-8 h-8 text-amber-300 animate-spin" />
+                    <span className="text-xs sm:text-sm font-semibold tracking-wider text-rose-200">
+                      অফিসিয়াল ব্যানার লোড হচ্ছে...
+                    </span>
+                  </div>
+                )}
+
                 <img
+                  key={bannerImage}
                   src={bannerImage}
                   alt="Ankita Makeup Artist Official Banner"
-                  className="w-full h-auto max-h-[580px] object-cover sm:object-contain mx-auto transition-transform duration-700 group-hover:scale-[1.015]"
+                  onLoad={() => setBannerLoaded(true)}
+                  onError={handleBannerImgError}
+                  className={`relative z-10 w-full h-full object-contain mx-auto transition-all duration-500 ${
+                    bannerLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+                  } group-hover:scale-[1.01]`}
                   referrerPolicy="no-referrer"
+                  loading="eager"
                 />
 
                 {/* Subtle Hover Zoom Overlay */}
-                <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                <div className="absolute inset-0 z-20 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                   <div className="px-4 py-2 rounded-full bg-black/75 backdrop-blur-md text-white text-xs font-semibold flex items-center space-x-2 border border-white/30 shadow-xl">
                     <Maximize2 className="w-4 h-4 text-amber-300" />
                     <span>ফুল স্ক্রিনে দেখতে ক্লিক করুন</span>
@@ -251,7 +306,7 @@ export const HeroBanner: React.FC = () => {
                 </div>
 
                 {/* Floating Bottom Left Studio Badge */}
-                <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-10 pointer-events-none">
+                <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-20 pointer-events-none">
                   <div className="px-3 py-1 rounded-full bg-[#7a1236]/90 backdrop-blur-md text-amber-200 text-[11px] font-bold tracking-wider uppercase border border-amber-300/40 shadow-lg flex items-center space-x-1.5">
                     <Sparkles className="w-3 h-3 text-amber-300" />
                     <span>Ankita Makeup Artist • Official Studio</span>
@@ -583,7 +638,8 @@ export const HeroBanner: React.FC = () => {
             {/* Banner Graphic Image Display */}
             <div className="p-2 sm:p-4 bg-stone-900 flex justify-center">
               <img
-                src="/images/ankita_banner.jpg"
+                src={bannerImage}
+                onError={handleBannerImgError}
                 alt="Official Ankita Makeup Artist Banner"
                 className="w-full max-h-[75vh] object-contain rounded-2xl shadow-lg"
               />
