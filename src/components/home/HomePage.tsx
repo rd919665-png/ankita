@@ -228,35 +228,43 @@ export const HomePage: React.FC = () => {
               <div
                 key={srv.id}
                 id={`srv-card-${srv.id}`}
-                className="bg-white rounded-2xl overflow-hidden border border-stone-200/80 shadow-xs hover:shadow-lg transition-all flex flex-col"
+                className="group bg-white rounded-2xl overflow-hidden border border-stone-200/90 shadow-xs hover:shadow-xl hover:-translate-y-1 hover:border-amber-300 transition-all duration-300 flex flex-col"
               >
-                <div className="relative h-48 overflow-hidden">
-                  <img src={srv.imageUrl} alt={srv.name} className="w-full h-full object-cover" />
+                <div className="relative h-48 overflow-hidden bg-stone-100">
+                  <img
+                    src={srv.imageUrl}
+                    alt={srv.name}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/hero_banner_full.jpg';
+                    }}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    referrerPolicy="no-referrer"
+                  />
                   <button
                     onClick={() => toggleWishlist(srv.id)}
                     title={isWished ? 'Remove from wishlist' : 'Save to wishlist'}
-                    className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-xs text-stone-700 hover:text-red-500 shadow-sm transition-colors cursor-pointer"
+                    className="absolute top-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-xs text-stone-700 hover:text-red-500 shadow-sm transition-colors cursor-pointer"
                   >
                     <Heart className={`w-4 h-4 ${isWished ? 'fill-red-500 text-red-500' : ''}`} />
                   </button>
-                  <span className="absolute bottom-2.5 left-2.5 bg-stone-950/75 text-white px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
+                  <span className="absolute bottom-2.5 left-2.5 bg-stone-950/80 backdrop-blur-xs text-amber-200 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider border border-amber-300/30">
                     {srv.category}
                   </span>
                 </div>
 
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                   <div>
-                    <h3 className="font-serif font-bold text-stone-900 text-base leading-snug">{srv.name}</h3>
-                    <p className="text-xs text-stone-500 mt-1 line-clamp-2">{srv.description}</p>
+                    <h3 className="font-serif font-bold text-stone-900 text-base leading-snug group-hover:text-[#8e512d] transition-colors">{srv.name}</h3>
+                    <p className="text-xs text-stone-500 mt-1 line-clamp-2 leading-relaxed">{srv.description}</p>
                     <div className="flex items-center space-x-1 text-stone-500 text-[11px] mt-2">
-                      <Clock className="w-3.5 h-3.5" />
+                      <Clock className="w-3.5 h-3.5 text-amber-600" />
                       <span>{srv.duration}</span>
                     </div>
                   </div>
 
                   <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
                     <div>
-                      <span className="text-[10px] text-stone-400 block uppercase">Starting at</span>
+                      <span className="text-[10px] text-stone-400 block uppercase font-medium">Starting at</span>
                       <span className="text-lg font-serif font-bold text-[#8e512d]">
                         ₹{srv.price.toLocaleString('en-IN')}
                       </span>
@@ -265,7 +273,7 @@ export const HomePage: React.FC = () => {
                     <button
                       id={`book-srv-btn-${srv.id}`}
                       onClick={() => openBookingModal(srv, 'service')}
-                      className="px-3.5 py-1.5 bg-[#8e512d] hover:bg-[#743e1f] text-white rounded-full text-xs font-semibold uppercase tracking-wider shadow-xs cursor-pointer"
+                      className="px-4 py-2 bg-[#8e512d] hover:bg-[#743e1f] text-white rounded-full text-xs font-bold uppercase tracking-wider shadow-xs hover:shadow-md transition-all cursor-pointer"
                     >
                       Book
                     </button>
@@ -286,6 +294,9 @@ export const HomePage: React.FC = () => {
               <div className="relative rounded-3xl overflow-hidden shadow-xl border-4 border-white aspect-[3/4] bg-stone-100 ring-1 ring-amber-300/40">
                 <img
                   src={settings.artistPhoto || '/images/ankita_artist.jpg'}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/images/hero_banner_full.jpg';
+                  }}
                   alt="Ankita - Professional Makeup Artist"
                   className="w-full h-full object-cover object-top"
                   referrerPolicy="no-referrer"

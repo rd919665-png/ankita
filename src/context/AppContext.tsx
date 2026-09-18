@@ -10,7 +10,7 @@ import {
   deleteDoc,
   onSnapshot,
 } from 'firebase/firestore';
-import { auth, db, googleProvider, handleFirestoreError, OperationType } from '@/src/firebase/config.ts';
+import { auth, db, googleProvider, handleFirestoreError, OperationType, ensureAuthSession } from '@/src/firebase/config.ts';
 import {
   ActivePage,
   AppNotification,
@@ -35,6 +35,11 @@ import {
   defaultReviews,
   defaultServices,
 } from '@/src/data/defaultData.ts';
+import {
+  safeMergeBusinessSettings,
+  normalizeBannerUrl,
+  BUNDLED_HERO_BANNER,
+} from '@/src/utils/bannerUtils.ts';
 
 interface AppContextType {
   // Navigation
@@ -148,24 +153,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
 
-  // Business Settings state (with persistent fallback)
+  // Business Settings state (with persistent fallback & safe validation)
   const [settings, setSettings] = useState<BusinessSettings>(() => {
-    const cached = localStorage.getItem('ankita_business_settings_v4');
+    const cached =
+      localStorage.getItem('ankita_business_settings_v4') ||
+      localStorage.getItem('ankita_business_settings');
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (parsed.phone === '08617312937' || parsed.phone === '+91 86173 12937') {
-          const resolvedBanner =
-            parsed.bannerUrl && !parsed.bannerUrl.startsWith('blob:')
-              ? parsed.bannerUrl
-              : '/images/hero_banner_full.jpg';
-          return {
-            ...defaultBusinessSettings,
-            ...parsed,
-            artistPhoto: parsed.artistPhoto || defaultBusinessSettings.artistPhoto,
-            bannerUrl: resolvedBanner,
-          };
-        }
+        return safeMergeBusinessSettings(defaultBusinessSettings, parsed);
       } catch {
         // use default
       }
@@ -333,20 +329,88 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, [settings.email, settings.adminEmail, settings.authorizedAdminEmails, settings.phone, wishlist]);
 
-  // Realtime or initial fetch for Business Settings from Firestore
+  // Realtime fetch for Business Settings from Firestore (Primary channel for all customers)
   useEffect(() => {
     const unsubscribe = onSnapshot(
       doc(db, 'businessSettings', 'main-settings'),
       (snapshot) => {
         if (snapshot.exists()) {
-          const data = snapshot.data() as BusinessSettings;
-          setSettings(data);
+          const data = snapshot.data() as Partial<BusinessSettings>;
+          setSettings((prev) => safeMergeBusinessSettings(prev, data));
         }
       },
       (error) => {
         // Fallback to offline / default data smoothly
         console.warn('Using local business settings:', error.message);
       }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  // Realtime listener for offers/main-banner (Fast broadcast channel for customers)
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      doc(db, 'offers', 'main-banner'),
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data() as { bannerUrl?: string };
+          if (data && data.bannerUrl) {
+            const valid = normalizeBannerUrl(data.bannerUrl);
+            if (valid) {
+              setSettings((prev) => {
+                if (prev.bannerUrl === valid) return prev;
+                return {
+                  ...prev,
+                  bannerUrl: valid,
+                  artistPhoto: valid,
+                };
+              });
+            }
+          }
+        }
+      },
+      () => {}
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  // Realtime listener for banners collection (Ensures custom added banners sync to all customers)
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'banners'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const remoteBanners: BannerItem[] = [];
+          snapshot.forEach((docSnap) => {
+            const b = docSnap.data() as BannerItem;
+            if (b && b.imageUrl) {
+              remoteBanners.push({ ...b, id: docSnap.id });
+            }
+          });
+
+          if (remoteBanners.length > 0) {
+            const activeBanner = remoteBanners.find((b) => b.active) || remoteBanners[0];
+            const validUrl = normalizeBannerUrl(activeBanner.imageUrl);
+            if (validUrl) {
+              setSettings((prev) => {
+                const existing = prev.bannerList || [];
+                const mergedList = [
+                  ...remoteBanners,
+                  ...existing.filter((eb) => !remoteBanners.some((rb) => rb.id === eb.id)),
+                ];
+                return {
+                  ...prev,
+                  bannerUrl: validUrl,
+                  bannerList: mergedList,
+                };
+              });
+            }
+          }
+        }
+      },
+      () => {}
     );
 
     return () => unsubscribe();
@@ -721,12 +785,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Update Business Settings
   const updateBusinessSettings = useCallback(
     async (newSettings: Partial<BusinessSettings>) => {
-      const merged = { ...settings, ...newSettings };
+      const merged = safeMergeBusinessSettings(settings, newSettings);
       setSettings(merged);
-      localStorage.setItem('ankita_business_settings', JSON.stringify(merged));
+      try {
+        localStorage.setItem('ankita_business_settings_v4', JSON.stringify(merged));
+      } catch (storageErr) {
+        console.warn('LocalStorage save skipped or full:', storageErr);
+      }
 
       try {
+        await ensureAuthSession();
         await setDoc(doc(db, 'businessSettings', 'main-settings'), merged, { merge: true });
+
+        // Broadcast to offers/main-banner so all customer devices instantly receive the active banner
+        if (merged.bannerUrl) {
+          await setDoc(
+            doc(db, 'offers', 'main-banner'),
+            {
+              id: 'main-banner',
+              bannerUrl: merged.bannerUrl,
+              title: merged.bannerTitle || 'Studio Banner',
+              subtitle: merged.bannerSubtitle || '',
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          ).catch((e) => console.warn('Broadcast to offers note:', e));
+        }
       } catch (err) {
         console.warn('Updated settings locally:', err);
       }
@@ -737,13 +821,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Banner Operations
   const addBanner = useCallback(
     async (banner: Omit<BannerItem, 'id'>) => {
+      const validUrl = normalizeBannerUrl(banner.imageUrl) || BUNDLED_HERO_BANNER;
       const newBanner: BannerItem = {
         ...banner,
         id: `banner-${Date.now()}`,
+        imageUrl: validUrl,
+        active: true,
       };
       const currentList = settings.bannerList || [];
-      const updatedList = [newBanner, ...currentList];
-      await updateBusinessSettings({ bannerList: updatedList });
+      // Deactivate others, put new one at the front and active
+      const updatedList = [newBanner, ...currentList.map((b) => ({ ...b, active: false }))];
+      await updateBusinessSettings({
+        bannerList: updatedList,
+        bannerUrl: validUrl,
+        artistPhoto: validUrl,
+      });
+
+      // Also persist to dedicated banners collection
+      try {
+        await ensureAuthSession();
+        await setDoc(doc(db, 'banners', newBanner.id), newBanner, { merge: true }).catch(() => {});
+      } catch {}
     },
     [settings.bannerList, updateBusinessSettings]
   );
@@ -752,26 +850,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     async (id: string) => {
       const currentList = settings.bannerList || [];
       const updatedList = currentList.filter((b) => b.id !== id);
-      await updateBusinessSettings({ bannerList: updatedList });
+      const deletedBanner = currentList.find((b) => b.id === id);
+      const wasActive = deletedBanner?.imageUrl === settings.bannerUrl || deletedBanner?.active;
+      const nextActive = updatedList[0];
+      const fallbackUrl = nextActive?.imageUrl ? normalizeBannerUrl(nextActive.imageUrl) || BUNDLED_HERO_BANNER : BUNDLED_HERO_BANNER;
+
+      await updateBusinessSettings({
+        bannerList: updatedList,
+        bannerUrl: wasActive ? fallbackUrl : settings.bannerUrl,
+        artistPhoto: wasActive ? fallbackUrl : settings.artistPhoto,
+      });
+
+      // Remove from banners collection
+      try {
+        await deleteDoc(doc(db, 'banners', id)).catch(() => {});
+      } catch {}
     },
-    [settings.bannerList, updateBusinessSettings]
+    [settings.bannerList, settings.bannerUrl, settings.artistPhoto, updateBusinessSettings]
   );
 
   const setActiveBanner = useCallback(
     async (id: string) => {
       const currentList = settings.bannerList || [];
       const target = currentList.find((b) => b.id === id);
+      if (!target) return;
+      const validUrl = normalizeBannerUrl(target.imageUrl) || BUNDLED_HERO_BANNER;
       const updatedList = currentList.map((b) => ({
         ...b,
         active: b.id === id,
       }));
       await updateBusinessSettings({
         bannerList: updatedList,
-        bannerUrl: target ? target.imageUrl : settings.bannerUrl,
-        artistPhoto: target ? target.imageUrl : settings.artistPhoto,
+        bannerUrl: validUrl,
+        artistPhoto: validUrl,
       });
+
+      // Mark active in banners collection
+      try {
+        await ensureAuthSession();
+        await setDoc(doc(db, 'banners', id), { ...target, active: true }, { merge: true }).catch(() => {});
+      } catch {}
     },
-    [settings.bannerList, settings.bannerUrl, settings.artistPhoto, updateBusinessSettings]
+    [settings.bannerList, updateBusinessSettings]
   );
 
   // Admin Service Operations

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Calendar, Heart, Bell, Shield, LogOut, Menu, X, User as UserIcon } from 'lucide-react';
+import { Sparkles, Calendar, Heart, Bell, Shield, LogOut, Menu, X, User as UserIcon, Key, Mail } from 'lucide-react';
 import { useApp } from '@/src/context/AppContext.tsx';
 import { ActivePage } from '@/src/types/index.ts';
 import { PWAInstallButton } from '@/src/components/common/PWAInstallButton.tsx';
@@ -17,8 +17,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications }) => {
     currentUser,
     userProfile,
     signOut,
+    signInWithGoogle,
     loginAsDemoAdmin,
     loginAsRipanAdmin,
+    loginWithAdminEmail,
     loginAsDemoCustomer,
     wishlist,
     services,
@@ -28,6 +30,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications }) => {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authDropdownOpen, setAuthDropdownOpen] = useState(false);
+  const [showAdminEmailInput, setShowAdminEmailInput] = useState(false);
+  const [adminInputEmail, setAdminInputEmail] = useState('');
+  const [adminInputError, setAdminInputError] = useState('');
+
+  const handleAdminEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminInputEmail.trim()) return;
+    const success = await loginWithAdminEmail(adminInputEmail);
+    if (success) {
+      setAdminInputError('');
+      setShowAdminEmailInput(false);
+      setAuthDropdownOpen(false);
+      setActivePage('admin');
+    } else {
+      setAdminInputError('এই ইমেইলটি অনুমোদিত অ্যাডমিন তালিকায় পাওয়া যায়নি।');
+    }
+  };
 
   const unreadNotifications = notifications.filter((n) => !n.read).length;
 
@@ -180,11 +199,73 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications }) => {
                       }}
                       className="w-full text-left px-4 py-2 flex items-center space-x-2 text-stone-800 hover:bg-[#faf4f0] hover:text-[#8e512d] font-medium"
                     >
-                      <Shield className="w-4 h-4 text-amber-600" />
-                      <div className="text-xs">
-                        <span className="font-bold block">Login as Super Admin</span>
+                      <Shield className="w-4 h-4 text-amber-600 shrink-0" />
+                      <div className="text-xs truncate">
+                        <span className="font-bold block">Super Admin (Ripan)</span>
                         <span className="text-[10px] text-stone-500 font-mono">ripan321321@gmail.com</span>
                       </div>
+                    </button>
+
+                    {/* Co-Admin Email Login toggle */}
+                    <div className="border-t border-b border-stone-100 py-1 bg-amber-50/50">
+                      {!showAdminEmailInput ? (
+                        <button
+                          id="dropdown-co-admin-toggle"
+                          onClick={() => setShowAdminEmailInput(true)}
+                          className="w-full text-left px-4 py-1.5 flex items-center space-x-2 text-stone-700 hover:bg-amber-100/60 text-xs font-semibold"
+                        >
+                          <Key className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>Authorized Admin Email Login</span>
+                        </button>
+                      ) : (
+                        <form onSubmit={handleAdminEmailSubmit} className="px-3 py-2 space-y-2">
+                          <div className="text-[10px] font-bold uppercase text-amber-800 flex items-center justify-between">
+                            <span>অ্যাডমিন ইমেইল লিখুন</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowAdminEmailInput(false);
+                                setAdminInputError('');
+                              }}
+                              className="text-stone-400 hover:text-stone-600"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-stone-400" />
+                            <input
+                              type="email"
+                              value={adminInputEmail}
+                              onChange={(e) => setAdminInputEmail(e.target.value)}
+                              placeholder="admin@gmail.com"
+                              className="w-full pl-7 pr-2 py-1 bg-white border border-amber-300 rounded text-xs outline-none focus:ring-1 focus:ring-amber-500"
+                              autoFocus
+                            />
+                          </div>
+                          {adminInputError && (
+                            <p className="text-[10px] text-red-600 leading-tight">{adminInputError}</p>
+                          )}
+                          <button
+                            type="submit"
+                            className="w-full py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold transition-colors cursor-pointer"
+                          >
+                            লগইন করুন (Access Admin)
+                          </button>
+                        </form>
+                      )}
+                    </div>
+
+                    <button
+                      id="dropdown-google-signin"
+                      onClick={() => {
+                        signInWithGoogle();
+                        setAuthDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 flex items-center space-x-2 text-stone-700 hover:bg-[#faf4f0] hover:text-[#8e512d] text-xs"
+                    >
+                      <UserIcon className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>Google দিয়ে সাইন ইন (Sign In)</span>
                     </button>
 
                     <button

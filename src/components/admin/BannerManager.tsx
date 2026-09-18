@@ -4,6 +4,7 @@ import {
   Image as ImageIcon,
   Upload,
   CheckCircle,
+  CheckCircle2,
   Trash2,
   Eye,
   Save,
@@ -18,9 +19,11 @@ import {
   UserCheck,
   Mail,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '@/src/context/AppContext.tsx';
 import { BannerItem, BusinessSettings } from '@/src/types/index.ts';
+import { normalizeBannerUrl, isValidBannerUrl } from '@/src/utils/bannerUtils.ts';
 
 export const BannerManager: React.FC = () => {
   const {
@@ -56,6 +59,8 @@ export const BannerManager: React.FC = () => {
   const [newBannerSubtitle, setNewBannerSubtitle] = useState('');
   const [newBannerImageUrl, setNewBannerImageUrl] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageSizeKb, setImageSizeKb] = useState<number | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
 
   // Admin emails form state
   const [newAdminEmail, setNewAdminEmail] = useState('');
@@ -64,9 +69,59 @@ export const BannerManager: React.FC = () => {
   // Feedback states
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [bannerErrorMessage, setBannerErrorMessage] = useState<string | null>(null);
 
-  // File Upload handler (converts uploaded photo to Base64 for instant preview & persistence)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Client-side automatic canvas image compression (scales high-res photos to fast, lightweight web format < 150KB)
+  const compressBannerImage = (file: File): Promise<{ dataUrl: string; sizeKb: number }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 675; // Standard 16:9 banner aspect ratio
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            const rawBase64 = event.target?.result as string;
+            resolve({ dataUrl: rawBase64, sizeKb: Math.round(rawBase64.length / 1024) });
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          // High-efficiency JPEG at 0.72 quality creates crystal clear banners (~60KB - 110KB)
+          // that load instantly for all customers on 4G/mobile networks and fit smoothly into Firestore
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.72);
+          const sizeKb = Math.round((compressedDataUrl.length * 3) / 4 / 1024);
+          resolve({ dataUrl: compressedDataUrl, sizeKb });
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  };
+
+  // File Upload handler with automatic compression
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -75,54 +130,74 @@ export const BannerManager: React.FC = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setNewBannerImageUrl(base64);
-      setImagePreview(base64);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsCompressing(true);
+      setBannerErrorMessage(null);
+      const { dataUrl, sizeKb } = await compressBannerImage(file);
+      setNewBannerImageUrl(dataUrl);
+      setImagePreview(dataUrl);
+      setImageSizeKb(sizeKb);
+    } catch (err) {
+      console.error('Failed to compress image:', err);
+      setBannerErrorMessage('ছবি লোড করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   // Add new banner to bannerList
   const handleAddNewBanner = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalUrl = newBannerImageUrl.trim() || imagePreview || '/images/ankita_banner.jpg';
-    if (!finalUrl) {
-      alert('দয়া করে ব্যানার এর ছবির URL অথবা ফাইল আপলোড করুন।');
+    const rawUrl = (newBannerImageUrl.trim() || imagePreview || '').trim();
+    if (!rawUrl) {
+      alert('দয়া করে ব্যানার এর ছবির ফাইল আপলোড করুন অথবা ছবির লিংক লিখুন।');
+      return;
+    }
+
+    if (rawUrl.startsWith('blob:')) {
+      alert('টেম্পোরারি blob: লিংক সেভ করা যাবে না। দয়া করে ডিভাইসের ছবি ফাইল আপলোড করুন অথবা একটি স্থায়ী ওয়েব লিংক দিন।');
+      return;
+    }
+
+    const validUrl = normalizeBannerUrl(rawUrl);
+    if (!validUrl) {
+      alert('ছবির লিংকটি সঠিক নয় (Invalid Image URL)। দয়া করে সঠিক ইমেজ লিংক অথবা ছবি আপলোড করুন।');
       return;
     }
 
     try {
-      await addBanner({
-        title: newBannerTitle.trim() || 'Signature Makeover',
-        subtitle: newBannerSubtitle.trim() || 'Ankita Makeup Artist',
-        imageUrl: finalUrl,
-        active: true,
-      });
+      setIsSaving(true);
+      setBannerErrorMessage(null);
 
-      // Also set as active current banner
-      await updateBusinessSettings({
-        bannerUrl: finalUrl,
-        artistPhoto: finalUrl,
+      const titleToSave = newBannerTitle.trim() || 'Signature Makeover';
+      const subtitleToSave = newBannerSubtitle.trim() || 'Ankita Makeup Artist';
+
+      await addBanner({
+        title: titleToSave,
+        subtitle: subtitleToSave,
+        imageUrl: validUrl,
+        active: true,
       });
 
       setBannerForm((prev) => ({
         ...prev,
-        bannerUrl: finalUrl,
+        bannerUrl: validUrl,
       }));
 
       setNewBannerTitle('');
       setNewBannerSubtitle('');
       setNewBannerImageUrl('');
       setImagePreview(null);
+      setImageSizeKb(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
 
       setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3000);
+      setTimeout(() => setSavedSuccess(false), 4000);
     } catch (err) {
-      console.error(err);
-      alert('ব্যানার যোগ করতে সমস্যা হয়েছে।');
+      console.error('Error adding banner:', err);
+      setBannerErrorMessage('ব্যানার সংরক্ষণ করতে ত্রুটি হয়েছে। আবার চেষ্টা করুন।');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -344,20 +419,40 @@ export const BannerManager: React.FC = () => {
       {/* 2. LIVE BANNER PREVIEW                                        */}
       {/* ------------------------------------------------------------- */}
       <div className="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center space-x-2">
             <Eye className="w-5 h-5 text-[#8e512d]" />
             <h3 className="text-lg font-serif font-bold text-stone-900">
               লাইভ ব্যানার প্রিভিউ (Live Banner Preview)
             </h3>
           </div>
-          <button
-            onClick={() => setActivePage('home')}
-            className="text-xs font-semibold text-[#8e512d] hover:text-[#743e1f] flex items-center space-x-1 cursor-pointer"
-          >
-            <span>হোমপেজে দেখুন</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300 text-xs font-semibold">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>সব কাস্টমারের জন্য লাইভ (Visible to all customers)</span>
+            </span>
+            <button
+              onClick={() => setActivePage('home')}
+              className="px-3 py-1 text-xs font-semibold bg-[#8e512d] hover:bg-[#743e1f] text-white rounded-lg flex items-center space-x-1 cursor-pointer transition-colors"
+            >
+              <span>হোমপেজে দেখুন</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* The Exact Full Poster Banner Displayed to All Customers */}
+        <div className="relative rounded-2xl overflow-hidden border-2 border-rose-200 shadow-lg bg-stone-950 aspect-[16/9] sm:aspect-[21/9] max-h-[380px] flex items-center justify-center group">
+          <img
+            src={settings.bannerUrl || '/images/hero_banner_full.jpg'}
+            alt="Customer live banner"
+            className="w-full h-full object-contain mx-auto"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute top-3 left-3 bg-black/75 backdrop-blur-xs text-white px-3 py-1 rounded-full text-[11px] font-bold border border-white/20 flex items-center space-x-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span>হোমপেজে গ্রাহকরা এই ব্যানারটি দেখছেন</span>
+          </div>
         </div>
 
         {/* Scaled Mini Preview of the Banner */}
@@ -464,19 +559,38 @@ export const BannerManager: React.FC = () => {
                 ১. ফাইল থেকে আপলোড করুন (Direct Image Upload)
               </label>
               <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-rose-300 hover:border-rose-500 bg-rose-50/50 hover:bg-rose-50 rounded-2xl p-6 text-center cursor-pointer transition-colors space-y-2"
+                onClick={() => !isCompressing && fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors space-y-2 ${
+                  isCompressing
+                    ? 'border-amber-400 bg-amber-50 cursor-wait'
+                    : 'border-rose-300 hover:border-rose-500 bg-rose-50/50 hover:bg-rose-50'
+                }`}
               >
-                <Upload className="w-8 h-8 text-[#8e512d] mx-auto" />
-                <p className="text-xs font-bold text-stone-800">
-                  ছবি নির্বাচন করতে এখানে ক্লিক করুন
-                </p>
-                <p className="text-[11px] text-stone-500">JPG, PNG, WebP supported</p>
+                {isCompressing ? (
+                  <div className="flex flex-col items-center justify-center space-y-2 py-2">
+                    <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
+                    <p className="text-xs font-bold text-amber-900">
+                      ছবি অপ্টিমাইজ ও কম্প্রেস হচ্ছে...
+                    </p>
+                    <p className="text-[11px] text-amber-700">দয়া করে এক মুহূর্ত অপেক্ষা করুন</p>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 text-[#8e512d] mx-auto" />
+                    <p className="text-xs font-bold text-stone-800">
+                      গ্যালারি বা ফাইল থেকে ছবি সিলেক্ট করুন
+                    </p>
+                    <p className="text-[11px] text-stone-500">
+                      JPG, PNG, WebP • স্বয়ংক্রিয়ভাবে দ্রুত লোডিংয়ের জন্য অপ্টিমাইজ হবে
+                    </p>
+                  </>
+                )}
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   onChange={handleFileUpload}
+                  disabled={isCompressing}
                   className="hidden"
                 />
               </div>
@@ -485,7 +599,7 @@ export const BannerManager: React.FC = () => {
             {/* Image URL & Preview */}
             <div className="space-y-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
-                ২. অথবা ছবির লিংক (Image URL)
+                ২. অথবা ছবির সরাসরি লিংক (Image URL)
               </label>
               <input
                 type="url"
@@ -493,35 +607,84 @@ export const BannerManager: React.FC = () => {
                 onChange={(e) => {
                   setNewBannerImageUrl(e.target.value);
                   setImagePreview(e.target.value);
+                  setImageSizeKb(null);
                 }}
-                placeholder="https://example.com/banner-photo.jpg"
+                placeholder="https://images.unsplash.com/... অথবা ছবির URL"
                 className="w-full px-3.5 py-2.5 bg-[#faf8f5] border border-stone-200 rounded-xl text-xs text-stone-900 focus:outline-none focus:border-[#8e512d]"
               />
 
               {imagePreview && (
-                <div className="mt-2 flex items-center space-x-3 p-2 bg-stone-100 rounded-xl">
+                <div className="mt-2 flex items-center space-x-3 p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl">
                   <img
                     src={imagePreview}
                     alt="Uploaded preview"
-                    className="w-14 h-14 object-cover rounded-lg border border-stone-300"
+                    className="w-16 h-16 object-cover rounded-lg border border-emerald-300 shadow-xs"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="text-xs">
-                    <p className="font-semibold text-stone-800">ছবি লোড হয়েছে</p>
-                    <p className="text-[10px] text-stone-500">Active হিসেবে সেট করার জন্য প্রস্তুত</p>
+                  <div className="text-xs space-y-0.5">
+                    <p className="font-bold text-emerald-900 flex items-center space-x-1">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>ছবি প্রস্তুত হয়েছে</span>
+                    </p>
+                    {imageSizeKb && (
+                      <p className="text-[11px] text-emerald-700 font-mono">
+                        সাইজ: {imageSizeKb} KB (অপ্টিমাইজড)
+                      </p>
+                    )}
+                    <p className="text-[10px] text-stone-500">
+                      নিচের বাটনে ক্লিক করে ব্যানারটি একটিভ করুন
+                    </p>
                   </div>
                 </div>
               )}
             </div>
           </div>
 
+          {bannerErrorMessage && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{bannerErrorMessage}</span>
+            </div>
+          )}
+
+          {savedSuccess && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="font-semibold">
+                  ✓ নতুন ব্যানার সফলভাবে যুক্ত ও হোমপেজে একটিভ হয়েছে!
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActivePage('home')}
+                className="text-xs font-bold text-emerald-900 underline flex items-center space-x-1"
+              >
+                <span>হোমপেজে দেখুন</span>
+                <ExternalLink className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              className="px-6 py-2.5 bg-[#8e512d] hover:bg-[#743e1f] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center space-x-2 cursor-pointer"
+              disabled={isSaving || isCompressing}
+              className={`px-6 py-2.5 bg-[#8e512d] hover:bg-[#743e1f] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center space-x-2 cursor-pointer ${
+                isSaving || isCompressing ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
             >
-              <Plus className="w-4 h-4" />
-              <span>ব্যানার যোগ করুন এবং এক্টিভ করুন (Add & Set Active)</span>
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>সংরক্ষণ হচ্ছে...</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  <span>ব্যানার যোগ করুন এবং এক্টিভ করুন (Add & Set Active)</span>
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -550,12 +713,18 @@ export const BannerManager: React.FC = () => {
                     type="button"
                     onClick={async () => {
                       setBannerForm((prev) => ({ ...prev, bannerUrl: preset.url }));
+                      await addBanner({
+                        title: preset.title,
+                        subtitle: preset.subtitle,
+                        imageUrl: preset.url,
+                        active: true,
+                      });
                       await updateBusinessSettings({
                         bannerUrl: preset.url,
                         artistPhoto: preset.url,
                       });
                       setSavedSuccess(true);
-                      setTimeout(() => setSavedSuccess(false), 2500);
+                      setTimeout(() => setSavedSuccess(false), 3000);
                     }}
                     className="mt-1 text-[10px] font-bold text-[#8e512d] hover:underline cursor-pointer"
                   >

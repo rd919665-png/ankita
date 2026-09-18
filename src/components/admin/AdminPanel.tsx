@@ -26,6 +26,10 @@ import {
   MessageCircle,
   Mail,
   Bell,
+  UserPlus,
+  UserCheck,
+  Key,
+  Upload,
 } from 'lucide-react';
 import { useApp } from '@/src/context/AppContext.tsx';
 import {
@@ -103,6 +107,49 @@ export const AdminPanel: React.FC = () => {
   // Business Details Form State (27 fields)
   const [businessForm, setBusinessForm] = useState<BusinessSettings>({ ...settings });
   const [saveSuccessMessage, setSaveSuccessMessage] = useState(false);
+  const [newAdminEmailInput, setNewAdminEmailInput] = useState('');
+  const [adminAddSuccess, setAdminAddSuccess] = useState('');
+
+  const handleAddAdminEmail = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = newAdminEmailInput.trim().toLowerCase();
+    if (!clean || !clean.includes('@')) {
+      alert('অনুগ্রহ করে একটি সঠিক ইমেইল এড্রেস লিখুন (যেমন: name@gmail.com)');
+      return;
+    }
+    const currentList = businessForm.authorizedAdminEmails || [];
+    if (currentList.map((x) => x.toLowerCase().trim()).includes(clean)) {
+      alert('এই ইমেইলটি ইতিমধ্যেই অনুমোদিত অ্যাডমিন হিসেবে যুক্ত রয়েছে!');
+      return;
+    }
+    const updated = [...currentList, clean];
+    const updatedForm = { ...businessForm, authorizedAdminEmails: updated };
+    setBusinessForm(updatedForm);
+    try {
+      await updateSettings(updatedForm);
+      setNewAdminEmailInput('');
+      setAdminAddSuccess(`অ্যাডমিন ইমেইল (${clean}) সফলভাবে যুক্ত ও সংরক্ষিত হয়েছে!`);
+      setTimeout(() => setAdminAddSuccess(''), 4000);
+    } catch {
+      alert('ইমেইল সেভ করতে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।');
+    }
+  };
+
+  const handleRemoveAdminEmail = async (emailToRemove: string) => {
+    if (confirm(`আপনি কি "${emailToRemove}" কে অ্যাডমিন তালিকা থেকে মুছে ফেলতে চান?`)) {
+      const currentList = businessForm.authorizedAdminEmails || [];
+      const updated = currentList.filter(
+        (e) => e.toLowerCase().trim() !== emailToRemove.toLowerCase().trim()
+      );
+      const updatedForm = { ...businessForm, authorizedAdminEmails: updated };
+      setBusinessForm(updatedForm);
+      try {
+        await updateSettings(updatedForm);
+      } catch {
+        alert('আপডেট করতে সমস্যা হয়েছে।');
+      }
+    }
+  };
 
   useEffect(() => {
     setBusinessForm({ ...settings });
@@ -360,6 +407,13 @@ export const AdminPanel: React.FC = () => {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ================= TAB: BANNER CONTROL & CUSTOMIZATION ================= */}
+      {activeTab === 'banner' && (
+        <div id="admin-banner-tab-content">
+          <BannerManager />
         </div>
       )}
 
@@ -956,6 +1010,156 @@ export const AdminPanel: React.FC = () => {
             </div>
           )}
 
+          {/* ================= DEDICATED ADMIN MANAGEMENT SECTION ================= */}
+          <div className="bg-gradient-to-br from-[#2a1715] via-[#3a1d1d] to-[#1f0f10] text-white p-6 sm:p-7 rounded-3xl shadow-xl border border-amber-500/30 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-500/20 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center">
+                  <Key className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="inline-flex items-center space-x-2 text-[10px] uppercase font-bold tracking-widest text-amber-400">
+                    <span>Role-Based Access Control</span>
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-serif font-bold text-white">
+                    👑 অ্যাডমিন এক্সেস ও পারমিশন কন্ট্রোল (Admin Access Management)
+                  </h3>
+                  <p className="text-xs text-stone-300">
+                    অন্য কাউকে অ্যাডমিন বানাতে চাইলে তাদের ইমেইল অ্যাড্রেস নিচে যোগ করুন।
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Helper Explanations */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-xs text-stone-200 space-y-1.5">
+              <p className="font-semibold text-amber-300 flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>কীভাবে কাজ করে (How it works):</span>
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-stone-300 text-[11px] sm:text-xs">
+                <li>যাকে অ্যাডমিন বানাতে চান, তার <strong>Gmail Address</strong> নিচের বক্সে লিখে <strong>"অ্যাডমিন যোগ করুন"</strong> এ ক্লিক করুন।</li>
+                <li>যুক্ত করার পর তিনি তার মোবাইল বা কম্পিউটার থেকে এই অ্যাপে ঢুকে <strong>Sign in with Google</strong> করলেই স্বয়ংক্রিয়ভাবে ফুল অ্যাডমিন অ্যাক্সেস পাবেন।</li>
+                <li>তিনি বুকিং দেখা ও এক্সেপ্ট করা, নতুন সার্ভিস ও প্যাকেজ তৈরি, ব্যানার পরিবর্তন, মূল্য ও অফার এডিট করার সম্পূর্ণ ক্ষমতা পাবেন।</li>
+              </ul>
+            </div>
+
+            {/* Add New Admin Email Form */}
+            <div className="space-y-3">
+              <label className="block text-xs font-bold uppercase tracking-wider text-amber-300">
+                নতুন অ্যাডমিন ইমেইল যোগ করুন (Add New Admin Email)
+              </label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                  <input
+                    type="email"
+                    value={newAdminEmailInput}
+                    onChange={(e) => setNewAdminEmailInput(e.target.value)}
+                    placeholder="e.g. colleague@gmail.com বা ankita.partner@gmail.com"
+                    className="w-full pl-10 pr-4 py-2.5 bg-stone-900/80 border border-stone-700 focus:border-amber-400 text-white rounded-xl text-xs placeholder:text-stone-500 outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddAdminEmail();
+                      }
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAddAdminEmail()}
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-stone-950 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 shadow-md cursor-pointer transition-all shrink-0"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>অ্যাডমিন যোগ করুন</span>
+                </button>
+              </div>
+
+              {adminAddSuccess && (
+                <div className="p-3 bg-emerald-950/70 border border-emerald-500/50 rounded-xl text-emerald-200 text-xs flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{adminAddSuccess}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Current Active Admins List */}
+            <div className="space-y-2 pt-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 block">
+                বর্তমানে অনুমোদিত অ্যাডমিন তালিকা (Active Authorized Admins):
+              </span>
+
+              <div className="grid sm:grid-cols-2 gap-2.5">
+                {/* Master Super Admin */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                  <div className="flex items-center space-x-2.5 overflow-hidden">
+                    <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-xs shrink-0">
+                      👑
+                    </div>
+                    <div className="truncate">
+                      <p className="text-xs font-bold text-amber-200 truncate">ripan321321@gmail.com</p>
+                      <p className="text-[10px] text-amber-400/80">Primary Super Admin (Owner)</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-semibold border border-amber-400/30 shrink-0">
+                    Permanent
+                  </span>
+                </div>
+
+                {/* Studio Default Email */}
+                {businessForm.email && businessForm.email.toLowerCase() !== 'ripan321321@gmail.com' && (
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-stone-900/60 border border-stone-800">
+                    <div className="flex items-center space-x-2.5 overflow-hidden">
+                      <div className="w-7 h-7 rounded-lg bg-stone-800 text-stone-300 flex items-center justify-center font-bold text-xs shrink-0">
+                        🏢
+                      </div>
+                      <div className="truncate">
+                        <p className="text-xs font-bold text-stone-200 truncate">{businessForm.email}</p>
+                        <p className="text-[10px] text-stone-400">Studio Official Email</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-stone-800 text-stone-300 font-semibold shrink-0">
+                      Studio Admin
+                    </span>
+                  </div>
+                )}
+
+                {/* Custom Authorized Admin Emails */}
+                {(businessForm.authorizedAdminEmails || []).map((admEmail) => (
+                  <div
+                    key={admEmail}
+                    className="flex items-center justify-between p-3 rounded-xl bg-stone-900/80 border border-stone-700 hover:border-amber-400/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2.5 overflow-hidden">
+                      <div className="w-7 h-7 rounded-lg bg-stone-800 text-amber-400 flex items-center justify-center shrink-0">
+                        <UserCheck className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="truncate">
+                        <p className="text-xs font-semibold text-white truncate">{admEmail}</p>
+                        <p className="text-[10px] text-emerald-400">Authorized Co-Admin</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAdminEmail(admEmail)}
+                      title="অ্যাডমিন থেকে সরান"
+                      className="p-1.5 text-stone-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {(!businessForm.authorizedAdminEmails || businessForm.authorizedAdminEmails.length === 0) && (
+                <p className="text-[11px] text-stone-400 italic pt-1">
+                  এখনও অন্য কোনো অতিরিক্ত ইমেইল যোগ করা হয়নি। উপরের বক্সে যেকোনো ইমেইল লিখে যোগ করতে পারেন।
+                </p>
+              )}
+            </div>
+          </div>
+
           <form onSubmit={handleSaveBusinessSettings} className="space-y-8">
             {/* Section A: Brand & Artist Details (Fields 1-6) */}
             <div className="space-y-4">
@@ -1235,16 +1439,41 @@ export const AdminPanel: React.FC = () => {
                 </div>
 
                 {/* 19. Cover/Banner Image URL */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    19. Cover / Banner Image URL
-                  </label>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                      19. Cover / Banner Image URL
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('banner')}
+                      className="text-xs text-[#8e512d] hover:text-[#743e1f] font-bold flex items-center space-x-1 underline cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>ব্যানার ম্যানেজার খুলুন →</span>
+                    </button>
+                  </div>
                   <input
                     type="url"
                     value={businessForm.bannerUrl}
                     onChange={(e) => setBusinessForm({ ...businessForm, bannerUrl: e.target.value })}
+                    placeholder="https://... অথবা /images/hero_banner_full.jpg"
                     className="w-full px-3 py-2 bg-[#faf8f5] border border-stone-200 rounded-xl text-xs"
                   />
+                  {businessForm.bannerUrl && (
+                    <div className="mt-1 flex items-center space-x-3 p-2 bg-stone-50 rounded-xl border border-stone-200">
+                      <img
+                        src={businessForm.bannerUrl}
+                        alt="Banner Preview"
+                        className="w-16 h-10 object-cover rounded-lg border border-stone-300"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="text-[11px] text-stone-600">
+                        <span className="font-semibold text-stone-900">বর্তমান ব্যানার প্রিভিউ</span>
+                        <p className="text-[10px] text-stone-400 truncate max-w-xs">{businessForm.bannerUrl}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 19.5 Makeup Artist Photo URL */}

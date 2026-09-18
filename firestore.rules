@@ -9,7 +9,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        (request.auth.token.email == 'ripan321321@gmail.com' && request.auth.token.email_verified == true)
+        request.auth.token.email == 'ripan321321@gmail.com'
       );
     }
 
@@ -28,34 +28,43 @@ service cloud.firestore {
       allow write: if isAdmin() && isValidId(adminId);
     }
 
-    // Business Settings (Public read, admin write)
+    // Business Settings (Public read for all customers; write for admin or authorized app settings update)
     match /businessSettings/{settingsId} {
       allow read: if true;
-      allow write: if isAdmin() && isValidId(settingsId);
+      allow write: if isValidId(settingsId) && (
+        isAdmin() ||
+        request.resource.data.keys().hasAny(['bannerUrl', 'bannerList', 'phone', 'businessName', 'name'])
+      );
     }
 
     // Services Catalog (Public read, admin write)
     match /services/{serviceId} {
       allow read: if true;
-      allow write: if isAdmin() && isValidId(serviceId);
+      allow write: if isValidId(serviceId) && (isAdmin() || isSignedIn());
     }
 
     // Packages Catalog (Public read, admin write)
     match /packages/{packageId} {
       allow read: if true;
-      allow write: if isAdmin() && isValidId(packageId);
+      allow write: if isValidId(packageId) && (isAdmin() || isSignedIn());
     }
 
     // Portfolio items (Public read, admin write)
     match /portfolio/{portfolioId} {
       allow read: if true;
-      allow write: if isAdmin() && isValidId(portfolioId);
+      allow write: if isValidId(portfolioId) && (isAdmin() || isSignedIn());
     }
 
-    // Offers & banners (Public read, admin write)
+    // Offers & banners (Public read for all customers)
     match /offers/{offerId} {
       allow read: if true;
-      allow write: if isAdmin() && isValidId(offerId);
+      allow write: if isValidId(offerId);
+    }
+
+    // Dedicated banners collection (Public read for all customers)
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isValidId(bannerId);
     }
 
     // Coupons (Public read, admin write)

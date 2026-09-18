@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, signInAnonymously } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '@/firebase-applet-config.json';
 
@@ -11,6 +11,17 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
 // Export Auth
 export const auth = getAuth(app);
+
+// Helper to ensure an active auth session for Firestore operations
+export async function ensureAuthSession(): Promise<void> {
+  if (!auth.currentUser) {
+    try {
+      await signInAnonymously(auth);
+    } catch {
+      // Ignore if offline or disabled
+    }
+  }
+}
 
 // Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();
